@@ -1,21 +1,25 @@
+import os
+from telegram import Update, InputFile
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 from moviepy.editor import VideoFileClip, vfx
 import tempfile
-import os
 
 TOKEN = os.getenv("BOT_TOKEN")
 JORKIN_PATH = "jorkin.gif"
 
+# Start command: Sends a welcome message
 async def start(update: Update, context: CallbackContext):
     await update.message.reply_text("Send me media to combine with Jorkin!")
 
+# Function to combine media with Jorkin GIF
 def combine_media(input_path, output_path, speed=1.0):
-    # Adjust jorkin.gif speed
+    # Adjust Jorkin's speed
     jorkin_clip = VideoFileClip(JORKIN_PATH).resize(0.5).fx(vfx.speedx, speed)
     media_clip = VideoFileClip(input_path)
     combined = CompositeVideoClip([media_clip, jorkin_clip.set_position(('left', 'bottom'))])
     combined.write_videofile(output_path, codec="libx264")
 
+# Handle the incoming media (video, photo, document)
 async def handle_media(update: Update, context: CallbackContext):
     user = update.message.from_user
     file = update.message.video or update.message.document or update.message.photo[-1]
@@ -39,6 +43,7 @@ async def handle_media(update: Update, context: CallbackContext):
         os.remove(input_file)
         os.remove(output_file)
 
+# Change the speed of Jorkin GIF
 async def change_speed(update: Update, context: CallbackContext):
     if len(context.args) == 1:
         speed = float(context.args[0])
@@ -50,16 +55,20 @@ async def change_speed(update: Update, context: CallbackContext):
     else:
         await update.message.reply_text("Usage: /speed <value>")
 
+# Main function: Setup and start the bot
 async def main():
+    # Create the Application with the bot token
     application = Application.builder().token(TOKEN).build()
 
-    # Handlers
+    # Add handlers for commands and messages
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("speed", change_speed))
     application.add_handler(MessageHandler(filters.Video | filters.Photo | filters.Document, handle_media))
 
+    # Start polling for updates
     await application.run_polling()
 
 if __name__ == "__main__":
     import asyncio
+    # Run the bot asynchronously
     asyncio.run(main())
