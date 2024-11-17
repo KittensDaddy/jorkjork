@@ -1,6 +1,6 @@
 import os
 from telegram import Update, InputFile
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext
 from moviepy.editor import VideoFileClip, concatenate_videoclips, CompositeVideoClip
 import ffmpeg
 
@@ -51,7 +51,7 @@ def main():
     
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("speed", change_speed))
-    dp.add_handler(MessageHandler(Filters.video | Filters.photo | Filters.document, handle_media))
+    dp.add_handler(MessageHandler(filters.video | filters.photo | filters.document, handle_media))
 
     updater.start_polling()
     updater.idle()
