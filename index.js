@@ -111,9 +111,10 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       console.log(`Input media duration: ${inputDuration} seconds`);  // Log duration
 		
 	  // Check if the input duration is valid
-      const durationOption = (inputDuration && inputDuration !== 'N/A')
-        ? `-t ${inputDuration}`  // Use the duration if valid
-        : '';  // Omit the -t argument if invalid
+      const validDuration = !isNaN(inputDuration) && inputDuration > 0 && inputDuration !== 'N/A';
+      // Use the valid duration option if it's a valid number
+	  const durationOption = validDuration ? `-t ${inputDuration}` : '';
+        
 		
       // Calculate the scale factor based on the smaller dimension
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
