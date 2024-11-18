@@ -4,7 +4,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Import ffmpeg-static for bundled ffmpeg binary
-const ffmpegPath = require('ffmpeg-static');
+const ffmpegPath = require('ffmpeg-ffprobe-static').ffmpeg; // Use ffmpeg-ffprobe-static's ffmpeg
+const ffprobePath = require('ffmpeg-ffprobe-static').ffprobe; // Use ffmpeg-ffprobe-static's ffprobe
 
 // Bot token from BotFather
 const token = process.env.TELEGRAM_TOKEN;
@@ -19,9 +20,9 @@ if (!fs.existsSync(jorkinPath)) {
   process.exit(1);
 }
 
-// Set FFmpeg binary path for fluent-ffmpeg
+// Set FFmpeg and FFprobe binary paths for fluent-ffmpeg
 ffmpeg.setFfmpegPath(ffmpegPath);
-ffmpeg.setFfprobePath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobePath);
 
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
