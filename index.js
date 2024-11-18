@@ -106,29 +106,27 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       const inputWidth = videoStream.width;
       const inputHeight = videoStream.height;
 
-        // Log dimensions
+      console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
 
       // Calculate the scale factor based on the smaller dimension
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
 
       // Calculate the bottom-left corner position
-      const xPosition = 0; // 10px from the left
-      const yPosition = inputHeight - scaleFactor; // 10px from the bottom
+      const xPosition = 10; // 10px from the left
+      const yPosition = inputHeight - scaleFactor - 10; // 10px from the bottom
 
       // Get the duration of the input media
       const inputDuration = metadata.format.duration;
-      
-	  console.log(`Input media dimensions: ${inputWidth}x${inputHeight} ${inputDuration}`);
-	  
+
       // Start the FFmpeg process
       ffmpeg(inputPath)
         .input(jorkinPath)
         .inputOptions([
-          `-t ${inputDuration}`,  // Set the duration of the overlay to match the input media
+          // No specific duration for the input GIF. It will loop by using -shortest.
         ])
         .complexFilter([
           // Scale the jorkin.gif and overlay it on the input media, looping it
-          `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=${xPosition}:${yPosition}:enable='between(t,0,${inputDuration})'`
+          `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=${xPosition}:${yPosition}:shortest=1`
         ])
         .save(outputPath)
         .on('end', () => {
@@ -142,5 +140,6 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
     });
   });
 };
+
 
 
