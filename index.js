@@ -126,11 +126,10 @@ import('node-fetch').then(fetchModule => {
               ? [`-stream_loop -1`, `-t ${inputDuration}`] : []
           )
           .complexFilter([ 
-            `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
+            `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1'}[scaledJorkin];[0:v],fps=30[scaledJorkin]overlay=0:H-h`
           ])
           .save(outputPath)
           .outputOptions([
-		    '-r 60',
             '-fs', '15M'           // Limit file size to 27MB
           ])
           .on('end', () => {
