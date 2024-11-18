@@ -24,6 +24,11 @@ if (!fs.existsSync(jorkinPath)) {
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
+console.log('FFmpeg Path:', ffmpegPath);
+console.log('FFprobe Path:', ffprobePath);
+console.log(require.resolve('ffmpeg-ffprobe-static'));
+
+
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
