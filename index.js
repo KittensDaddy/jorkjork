@@ -131,7 +131,7 @@ import('node-fetch').then(fetchModule => {
           .save(outputPath)
           .outputOptions([
             '-r 30',               // Frame rate of 25fps
-            '-fs', '15M'           // Limit file size to 27MB
+            '-fs', '15M',           // Limit file size to 27MB
 			'-filter_complex',        // This enables more detailed filtering
 			'fps=30,scale=iw:ih:flags=lanczos' // Optional: Use Lanczos filter for scaling and higher fps
           ])
