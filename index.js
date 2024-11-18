@@ -56,8 +56,8 @@ import('node-fetch').then(fetchModule => {
 
         // Check if the output file exceeds 27MB
         const outputFileSize = fs.statSync(outputFilePath).size;
-        if (outputFileSize > 27 * 1024 * 1024) {
-          throw new Error('Output file size exceeds the 27MB limit');
+        if (outputFileSize > 30 * 1024 * 1024) {
+          throw new Error('Output file size exceeds the 30MB limit');
         }
 
         // Send the resulting file
@@ -120,7 +120,7 @@ import('node-fetch').then(fetchModule => {
           .complexFilter([
             `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.3'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
           ])
-          .output(outputPath)
+          .save(outputPath)
           .outputOptions([
             '-pix_fmt rgb8',     // Set pixel format to rgb8 (required for GIF)
             '-r 25',             // Set frame rate to 25 fps
