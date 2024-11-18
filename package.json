@@ -12,7 +12,9 @@
     "node-fetch": "^3.3.0",
     "ffmpeg-ffprobe-static": "latest",
     "node-telegram-bot-api": "^0.61.0",
-    "path": "latest"
+    "path": "latest",
+	"sharp": "^0.31.0",
+    "execa": "^6.1.0"
   },
   "engines": {
     "node": ">=14.16.0"
