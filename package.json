@@ -6,11 +6,11 @@
   "scripts": {
     "start": "node index.js"
   },
-  "type": "module", 
+  "type": "module",
   "dependencies": {
     "fluent-ffmpeg": "^2.1.2",
     "fs": "latest",
-    "node-fetch@2": "latest",
+    "node-fetch": "^3.3.0",
     "ffmpeg-ffprobe-static": "latest",
     "node-telegram-bot-api": "^0.61.0",
     "path": "latest",
