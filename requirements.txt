@@ -1,6 +1,0 @@
-Flask
-python-telegram-bot
-requests
-moviepy
-Pillow
-python-dotenv
