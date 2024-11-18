@@ -33,15 +33,45 @@ import('node-fetch').then(fetchModule => {
   // Handle /start command
   bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Welcome! Send me a media file (image, WebP, GIF, or video), and I will combine it with "jorkin.gif".');
+    bot.sendMessage(chatId, 'Welcome! Send me a media file (image, WebP, GIF, video) or a URL link, and I will combine it with "jorkin.gif".');
   });
 
   // Handle media messages
   bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
 
+    // Check if the message contains a URL
+    if (msg.text && isValidUrl(msg.text)) {
+      const url = msg.text;
+      try {
+        const inputFilePath = path.join(__dirname, 'input-media');
+        const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`); // Force .gif output extension
+
+        // Download the media from the URL
+        await downloadFile(url, inputFilePath);
+
+        // Combine with jorkin.gif using FFmpeg
+        await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
+
+        // Check if the output file exceeds 30MB
+        const outputFileSize = fs.statSync(outputFilePath).size;
+        if (outputFileSize > 30 * 1024 * 1024) {
+          throw new Error('Output file size exceeds the 30MB limit');
+        }
+
+        // Send the resulting file
+        await bot.sendDocument(chatId, outputFilePath);
+
+        // Cleanup temporary files
+        fs.unlinkSync(inputFilePath);
+        fs.unlinkSync(outputFilePath);
+      } catch (err) {
+        console.error('Error processing media:', err);
+        bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
+      }
+    }
     // Check if the message contains media
-    if (msg.photo || msg.document || msg.video || msg.animation) {
+    else if (msg.photo || msg.document || msg.video || msg.animation) {
       try {
         const fileId = msg.photo?.[msg.photo.length - 1]?.file_id || msg.document?.file_id || msg.video?.file_id || msg.animation?.file_id;
         const fileLink = await bot.getFileLink(fileId);
@@ -54,7 +84,7 @@ import('node-fetch').then(fetchModule => {
         // Combine with jorkin.gif using FFmpeg
         await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
 
-        // Check if the output file exceeds 27MB
+        // Check if the output file exceeds 30MB
         const outputFileSize = fs.statSync(outputFilePath).size;
         if (outputFileSize > 30 * 1024 * 1024) {
           throw new Error('Output file size exceeds the 30MB limit');
@@ -71,11 +101,11 @@ import('node-fetch').then(fetchModule => {
         bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
       }
     } else {
-      bot.sendMessage(chatId, 'Please send an image, WebP, GIF, or video file to combine with "jorkin.gif".');
+      bot.sendMessage(chatId, 'Please send an image, WebP, GIF, video file, or a valid URL to combine with "jorkin.gif".');
     }
   });
 
-  // Function to download a file from Telegram
+  // Function to download a file from a URL
   const downloadFile = async (url, dest) => {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Failed to download file: ${response.statusText}`);
@@ -85,6 +115,16 @@ import('node-fetch').then(fetchModule => {
       response.body.on('error', reject);
       fileStream.on('finish', resolve);
     });
+  };
+
+  // Function to validate URL format
+  const isValidUrl = (url) => {
+    try {
+      new URL(url);
+      return true;
+    } catch (e) {
+      return false;
+    }
   };
 
   // Function to combine media with jorkin.gif, handling WebP (animated or static) and other formats
@@ -116,16 +156,16 @@ import('node-fetch').then(fetchModule => {
             isAnimated
               ? [`-stream_loop -1`, `-t ${inputDuration}`] : []
           )
-          .complexFilter([
+          .complexFilter([ 
             `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.4'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
           ])
           .save(outputPath)
           .outputOptions([
-			'-c:v gif',           // Force output to GIF
-			'-pix_fmt rgb8',       // Pixel format for GIFs
-			'-r 25',               // Frame rate of 25fps
-			'-fs', '27M'           // Limit file size to 27MB
-		  ])
+            '-c:v gif',           // Force output to GIF
+            '-pix_fmt rgb8',       // Pixel format for GIFs
+            '-r 25',               // Frame rate of 25fps
+            '-fs', '27M'           // Limit file size to 27MB
+          ])
           .on('end', () => {
             console.log('Media combined successfully');
             resolve();
@@ -139,6 +179,7 @@ import('node-fetch').then(fetchModule => {
       });
     });
   };
+
 }).catch(err => {
   console.error('Error loading node-fetch:', err);
 });
