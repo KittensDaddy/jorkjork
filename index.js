@@ -70,6 +70,36 @@ import('node-fetch').then(fetchModule => {
         console.error('Error processing media:', err);
         bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
       }
+    } else if (msg.reply_to_message && msg.reply_to_message.from.username === bot.username) {
+      // Handle when the bot is mentioned in reply to media
+      try {
+        const fileId = msg.photo?.[msg.photo.length - 1]?.file_id || msg.document?.file_id || msg.video?.file_id || msg.animation?.file_id;
+        const fileLink = await bot.getFileLink(fileId);
+        const inputFilePath = path.join(__dirname, 'input-media');
+        const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`); // Force .gif output extension
+
+        // Download the media file
+        await downloadFile(fileLink, inputFilePath);
+
+        // Combine with jorkin.gif using FFmpeg
+        await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
+
+        // Check if the output file exceeds 27MB
+        const outputFileSize = fs.statSync(outputFilePath).size;
+        if (outputFileSize > 30 * 1024 * 1024) {
+          throw new Error('Output file size exceeds the 30MB limit');
+        }
+
+        // Send the resulting file
+        await bot.sendDocument(chatId, outputFilePath);
+
+        // Cleanup temporary files
+        fs.unlinkSync(inputFilePath);
+        fs.unlinkSync(outputFilePath);
+      } catch (err) {
+        console.error('Error processing media:', err);
+        bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
+      }
     } else {
       bot.sendMessage(chatId, 'Please send an image, WebP, GIF, or video file to combine with "jorkin.gif".');
     }
