@@ -120,7 +120,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       // Start the FFmpeg process
       const ffmpegCommand = ffmpeg(inputPath)
         .input(jorkinPath)
-        .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : [`-stream_loop -1`]) // Include -t only if animated
+        .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : []) // Include -t only if animated
         .complexFilter([
           // Scale the jorkin.gif and overlay it on the input media
           `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
