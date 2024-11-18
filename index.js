@@ -7,6 +7,10 @@ import path from 'path';
 import('node-fetch').then(fetchModule => {
   const fetch = fetchModule.default;
 
+  // Get current directory (fix for ES Modules)
+  const __filename = new URL(import.meta.url).pathname;
+  const __dirname = path.dirname(__filename);
+
   // Bot token from BotFather
   const token = process.env.TELEGRAM_TOKEN;
   const bot = new TelegramBot(token, { polling: true });
