@@ -106,7 +106,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       const inputWidth = videoStream.width;
       const inputHeight = videoStream.height;
 
-      console.log(`Input media dimensions: ${inputWidth}x${inputHeight} ${inputDuration}`);  // Log dimensions
+        // Log dimensions
 
       // Calculate the scale factor based on the smaller dimension
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
@@ -118,6 +118,8 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       // Get the duration of the input media
       const inputDuration = metadata.format.duration;
       
+	  console.log(`Input media dimensions: ${inputWidth}x${inputHeight} ${inputDuration}`);
+	  
       // Start the FFmpeg process
       ffmpeg(inputPath)
         .input(jorkinPath)
