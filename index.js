@@ -124,8 +124,9 @@ import('node-fetch').then(fetchModule => {
           .outputOptions([
             '-pix_fmt rgb8',     // Set pixel format to rgb8 (required for GIF)
             '-r 25',             // Set frame rate to 25 fps
+			'-f gif',
             '-fs', '27M'         // Limit the file size to 27MB
-          ])
+		  ])
           .on('end', () => {
             console.log('Media combined successfully');
             resolve();
