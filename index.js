@@ -117,7 +117,7 @@ import('node-fetch').then(fetchModule => {
               ? [`-stream_loop -1`, `-t ${inputDuration}`] : []
           )
           .complexFilter([
-            `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.3'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
+            `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.4'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
           ])
           .save(outputPath)
           .outputOptions([
