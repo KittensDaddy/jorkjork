@@ -111,9 +111,9 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       console.log(`Input media duration: ${inputDuration} seconds`);  // Log duration
 		
 	  // Check if the input duration is valid
-      const validDuration = !isNaN(inputDuration) && inputDuration > 0 && inputDuration !== 'N/A';
+      const isValidDuration = !isNaN(inputDuration) && inputDuration > 0;
       // Use the valid duration option if it's a valid number
-	  const durationOption = validDuration ? `-t ${inputDuration}` : '';
+	  const durationOption = isValidDuration ? `-t ${inputDuration}` : '';
         
 		
       // Calculate the scale factor based on the smaller dimension
@@ -125,7 +125,6 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         .inputOptions([
           `-stream_loop -1`,  // Loop jorkin.gif indefinitely
           `-t ${inputDuration}`, // Match the input media duration
-		  `-r 25`, //FPS
         ])
         .complexFilter([
           // Scale the jorkin.gif and overlay it on the input media
