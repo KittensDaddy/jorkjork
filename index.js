@@ -125,8 +125,8 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         .input(jorkinPath)
         .inputOptions(inputOptions)  // Only apply -t if duration is valid
         .complexFilter([
-          // Apply the loop filter if the input media is a video
-          `[1:v]loop=0:size=99999999:start=0,scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
+          // Loop the jorkin.gif for the entire duration of the input media (or indefinitely for images)
+          `[1:v]loop=-1:size=1:start=0,scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
         ])
         .save(outputPath)
         .on('end', () => {
