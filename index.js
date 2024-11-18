@@ -142,4 +142,4 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       console.log(ffmpegCommand._getArguments().join(' '));  // Log the full ffmpeg command for debugging
     });
   });
-};
+}};
