@@ -1,7 +1,10 @@
 const TelegramBot = require('node-telegram-bot-api');
-const ffmpeg = require('ffmpeg-static');
+const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
+
+// Import ffmpeg-static for bundled ffmpeg binary
+const ffmpegPath = require('ffmpeg-static');
 
 // Bot token from BotFather
 const token = process.env.TELEGRAM_TOKEN;
@@ -15,6 +18,9 @@ if (!fs.existsSync(jorkinPath)) {
   console.error('jorkin.gif not found! Please upload it to the project directory.');
   process.exit(1);
 }
+
+// Set FFmpeg binary path for fluent-ffmpeg
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
@@ -72,10 +78,9 @@ const downloadFile = async (url, dest) => {
 // Function to combine media with jorkin.gif
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .setFfmpegPath(ffmpegPath) // Use the static FFmpeg binary
+    ffmpeg(inputPath) // Call fluent-ffmpeg properly
       .input(jorkinPath)
-      .complexFilter('[0:v][1:v] overlay=10:10')
+      .complexFilter('[0:v][1:v] overlay=10:10') // Adjust overlay position here
       .save(outputPath)
       .on('end', resolve)
       .on('error', reject);
