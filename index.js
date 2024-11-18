@@ -102,7 +102,7 @@ const downloadFile = async (url, dest) => {
   });
 };
 
-// Function to combine media with jorkin.gif
+// Function to combine media with jorkin.gif, handling WebP (animated or static) and other formats
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
     // Use ffprobe to get the media dimensions and determine if WebP is animated or static
@@ -139,10 +139,12 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
             ? [`-stream_loop -1`, `-t ${inputDuration}`] // Loop jorkin.gif to match input duration if animated
             : [] // Static input
         )
-        .complexFilter([ 
+        .complexFilter([
+          // Scale the jorkin.gif and optionally adjust speed for static inputs
           `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.3'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
         ])
-        .save(outputPath)
+        .output(outputPath)
+        .outputOptions(['-fs', '27M']) // Limit the file size to 27 MB
         .on('end', () => {
           console.log('Media combined successfully');
           resolve();
@@ -154,6 +156,8 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
 
       // Log the FFmpeg command for debugging
       console.log(ffmpegCommand._getArguments().join(' '));
+
+      ffmpegCommand.run();
     });
   });
 };
