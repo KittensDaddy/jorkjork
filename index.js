@@ -2,6 +2,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
+const fetch = require('node-fetch'); // Import node-fetch for downloading files
 
 // Import ffmpeg-static for bundled ffmpeg binary
 const ffmpegPath = '/app/node_modules/ffmpeg-ffprobe-static/ffmpeg';
@@ -27,14 +28,14 @@ ffmpeg.setFfprobePath(ffprobePath);
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Welcome! Send me a media file (image, WebP, GIF, or video) or a URL link, and I will combine it with "jorkin.gif".');
+  bot.sendMessage(chatId, 'Welcome! Send me a media URL (image, WebP, GIF, or video) and I will combine it with "jorkin.gif".');
 });
 
-// Handle media messages and URLs
+// Handle text messages and media links
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
 
-  // If the message contains a URL (link)
+  // If the message contains a valid URL
   if (msg.text && isValidURL(msg.text)) {
     const url = msg.text;
     const inputFilePath = path.join(__dirname, 'input-media');
@@ -57,39 +58,13 @@ bot.on('message', async (msg) => {
       console.error('Error processing media from URL:', err);
       bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
     }
-  } else if (msg.photo || msg.document || msg.video || msg.animation) {
-    // If the message contains a photo, document (file), video, or animation
-    try {
-      // Download the file
-      const fileId = msg.photo?.[msg.photo.length - 1]?.file_id || msg.document?.file_id || msg.video?.file_id || msg.animation?.file_id;
-      const fileLink = await bot.getFileLink(fileId);
-      const inputFilePath = path.join(__dirname, 'input-media');
-      const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`);
-
-      // Download the media file
-      await downloadFile(fileLink, inputFilePath);
-
-      // Combine with jorkin.gif using FFmpeg
-      await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
-
-      // Send the resulting file
-      await bot.sendDocument(chatId, outputFilePath);
-
-      // Cleanup temporary files
-      fs.unlinkSync(inputFilePath);
-      fs.unlinkSync(outputFilePath);
-    } catch (err) {
-      console.error('Error processing media:', err);
-      bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
-    }
   } else {
-    bot.sendMessage(chatId, 'Please send an image, WebP, GIF, video file, or a valid URL to combine with "jorkin.gif".');
+    bot.sendMessage(chatId, 'Please send a valid media URL (image, WebP, GIF, or video) to combine with "jorkin.gif".');
   }
 });
 
 // Function to download a file from a URL
 const downloadFile = async (url, dest) => {
-  const { default: fetch } = await import('node-fetch'); // Dynamically import node-fetch
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to download file: ${response.statusText}`);
   const fileStream = fs.createWriteStream(dest);
