@@ -97,55 +97,50 @@ import('node-fetch').then(fetchModule => {
   };
 
   // Function to combine media with jorkin.gif, handling WebP (animated or static) and other formats
-  const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
-    return new Promise((resolve, reject) => {
-      ffmpeg.ffprobe(inputPath, (err, metadata) => {
-        if (err) {
-          console.error("Error in ffprobe:", err);
-          reject('Error getting input media dimensions');
-          return;
-        }
+const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(inputPath, (err, metadata) => {
+      if (err) {
+        console.error("Error in ffprobe:", err);
+        reject('Error getting input media dimensions');
+        return;
+      }
 
-        const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
-        const inputWidth = videoStream?.width || 500;
-        const inputHeight = videoStream?.height || 500;
-        const frameCount = videoStream?.nb_frames || 1;
-        const inputDuration = metadata.format.duration || 0;
+      const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
+      const inputWidth = videoStream?.width || 500;
+      const inputHeight = videoStream?.height || 500;
+      const inputDuration = metadata.format.duration || 0;
 
-        console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);
-        console.log(`Input media duration: ${inputDuration || 'N/A'} seconds`);
-        console.log(`Input media frame count: ${frameCount}`);
+      console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);
+      console.log(`Input media duration: ${inputDuration || 'N/A'} seconds`);
 
-        const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
-        const isAnimated = inputDuration > 0 || frameCount > 1;
+      const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
+      const isAnimated = inputDuration > 0;
 
-        const ffmpegCommand = ffmpeg(inputPath)
-          .input(jorkinPath)
-          .inputOptions(
-            isAnimated
-              ? [`-stream_loop -1`, `-t ${inputDuration}`] : []
-          )
-          .complexFilter([ 
-            `[1:v]scale=${scaleFactor}:${scaleFactor},fps=30${isAnimated ? '' : ',setpts=PTS/1'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
-          ])
-          .save(outputPath)
-          .outputOptions([
-		    '-r 30',
-            '-fs', '15M'           // Limit file size to 27MB
-          ])
-          .on('end', () => {
-            console.log('Media combined successfully');
-            resolve();
-          })
-          .on('error', (err) => {
-            console.error('Error processing media:', err);
-            reject(err);
-          });
+      const ffmpegCommand = ffmpeg(inputPath)
+        .input(jorkinPath)
+        .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : [])
+        .complexFilter([
+          `[1:v]scale=${scaleFactor}:${scaleFactor},fps=30,setsar=1[scaledJorkin];` +  // Ensures smooth FPS on the GIF
+          `[0:v][scaledJorkin]overlay=0:H-h`  // Overlay the GIF at bottom-left corner
+        ])
+        .save(outputPath)
+        .outputOptions([
+          '-r 30', // Ensure the output video frame rate is 30
+          '-fs', '15M', // Limit file size to 15MB
+          '-filter_complex',  // Use more detailed filtering
+          'fps=30,scale=iw:ih:flags=lanczos'  // Optional: use Lanczos filter for high-quality scaling
+        ])
+        .on('end', () => {
+          console.log('Media combined successfully');
+          resolve();
+        })
+        .on('error', (err) => {
+          console.error('Error processing media:', err);
+          reject(err);
+        });
 
-        console.log(ffmpegCommand._getArguments().join(' '));
-      });
+      console.log(ffmpegCommand._getArguments().join(' '));
     });
-  };
-}).catch(err => {
-  console.error('Error loading node-fetch:', err);
-});
+  });
+};
