@@ -115,7 +115,11 @@ import('node-fetch').then(fetchModule => {
             `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.3'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
           ])
           .output(outputPath)
-          .outputOptions(['-f gif'])  // Ensure output is GIF
+          .outputOptions([
+            '-f gif',           // Ensure output is GIF
+            '-pix_fmt rgb8',     // Set pixel format to rgb8 (required for GIF)
+            '-r 25'              // Set frame rate to 15 fps (adjust as needed)
+          ])
           .on('end', () => {
             console.log('Media combined successfully');
             resolve();
