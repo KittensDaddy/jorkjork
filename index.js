@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Import ffmpeg-static for bundled ffmpeg binary
-const ffmpegPath = '/app/node_modules/ffmpeg-ffprobe-static/ffmpeg';  // Adjust the path according to your environment
-const ffprobePath = '/app/node_modules/ffmpeg-ffprobe-static/ffprobe';  // Adjust the path according to your environment
+const ffmpegPath = '/app/node_modules/ffmpeg-ffprobe-static/ffmpeg';
+const ffprobePath = '/app/node_modules/ffmpeg-ffprobe-static/ffprobe';
 
 // Bot token from BotFather
 const token = process.env.TELEGRAM_TOKEN;
@@ -90,15 +90,9 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
 
       // Get the video stream for dimensions and frame count
       const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
-      if (!videoStream || !videoStream.width || !videoStream.height) {
-        console.error("Invalid media dimensions");
-        reject('Invalid media dimensions');
-        return;
-      }
-
-      const inputWidth = videoStream.width;
-      const inputHeight = videoStream.height;
-      const frameCount = videoStream.nb_frames || 1; // `nb_frames` is undefined for some formats
+      const inputWidth = videoStream?.width || 500; // Default width for static WebP
+      const inputHeight = videoStream?.height || 500; // Default height for static WebP
+      const frameCount = videoStream?.nb_frames || 1; // `nb_frames` is undefined for static images
       const inputDuration = metadata.format.duration || 0; // Duration is undefined for static images
 
       console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
