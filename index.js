@@ -81,12 +81,22 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
     // Probe the input media to get its width and height
     ffmpeg.ffprobe(inputPath, (err, metadata) => {
       if (err) {
+        console.error("Error in ffprobe:", err);  // Log the error
         reject('Error getting input media dimensions');
+        return;
+      }
+
+      // Ensure the media contains valid dimensions
+      if (!metadata.streams[0] || !metadata.streams[0].width || !metadata.streams[0].height) {
+        console.error("Invalid media dimensions");
+        reject('Invalid media dimensions');
         return;
       }
 
       const inputWidth = metadata.streams[0].width;
       const inputHeight = metadata.streams[0].height;
+
+      console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
 
       // Calculate the scale factor based on the smaller dimension
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
