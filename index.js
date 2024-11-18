@@ -130,8 +130,6 @@ import('node-fetch').then(fetchModule => {
           ])
           .save(outputPath)
           .outputOptions([
-            '-c:v gif',           // Force output to GIF
-            '-pix_fmt rgb8',       // Pixel format for GIFs
             '-r 30',               // Frame rate of 25fps
             '-fs', '15M'           // Limit file size to 27MB
           ])
