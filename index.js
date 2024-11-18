@@ -126,7 +126,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         ])
         .complexFilter([
           // Scale the jorkin.gif and overlay it on the input media
-          `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=${xPosition}:${yPosition}`
+          `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
         ])
         .save(outputPath)
         .on('end', () => {
