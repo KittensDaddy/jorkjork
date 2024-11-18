@@ -2,7 +2,23 @@ const TelegramBot = require('node-telegram-bot-api');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
-const fetch = require('node-fetch'); // Import node-fetch for downloading files
+import('node-fetch').then(fetchModule => {
+  const fetch = fetchModule.default;  // Get the default export from node-fetch
+
+  // Your code for using fetch goes here, like downloading files.
+  const downloadFile = async (url, dest) => {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to download file: ${response.statusText}`);
+    const fileStream = fs.createWriteStream(dest);
+    await new Promise((resolve, reject) => {
+      response.body.pipe(fileStream);
+      response.body.on('error', reject);
+      fileStream.on('finish', resolve);
+    });
+  };
+}).catch(err => {
+  console.error('Error loading node-fetch:', err);
+});
 
 // Import ffmpeg-static for bundled ffmpeg binary
 const ffmpegPath = '/app/node_modules/ffmpeg-ffprobe-static/ffmpeg';
