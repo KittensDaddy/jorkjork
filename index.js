@@ -87,7 +87,7 @@ const downloadFile = async (url, dest) => {
 // Function to combine media with jorkin.gif, scaling jorkin.gif to 50% of the smaller dimension (width or height) of the input media
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
-    // Use ffprobe to get the media dimensions
+    // Use ffprobe to get the media dimensions and duration
     ffmpeg.ffprobe(inputPath, (err, metadata) => {
       if (err) {
         console.error("Error in ffprobe:", err);  // Log the error
@@ -95,51 +95,38 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         return;
       }
 
-      // Ensure the media contains valid dimensions
+      // Ensure the media contains valid dimensions and duration
       const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
-      const imageStream = metadata.streams.find(stream => stream.codec_type === 'image');
-      
-      if (!videoStream && !imageStream) {
-        console.error("Invalid media type");
-        reject('Invalid media type');
+      const duration = metadata.format.duration; // Get the input media's duration in seconds
+      const isImage = !videoStream;  // Check if the media is an image (no video stream)
+
+      if (!videoStream || !videoStream.width || !videoStream.height) {
+        console.error("Invalid media dimensions");
+        reject('Invalid media dimensions');
         return;
       }
 
-      let inputWidth, inputHeight, inputDuration;
+      const inputWidth = videoStream.width;
+      const inputHeight = videoStream.height;
 
-      // For video, get the width, height, and duration
-      if (videoStream) {
-        inputWidth = videoStream.width;
-        inputHeight = videoStream.height;
-        inputDuration = metadata.format.duration;
-      }
-
-      // For image, get the width and height but no duration
-      if (imageStream) {
-        inputWidth = imageStream.width;
-        inputHeight = imageStream.height;
-        inputDuration = 5; // Default duration for images, 5 seconds
-      }
-
-      console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
+      console.log(`Input media dimensions: ${inputWidth}x${inputHeight}, Duration: ${duration}s`);  // Log dimensions and duration
 
       // Calculate the scale factor based on the smaller dimension
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
 
-      // Calculate the bottom-left corner position
-      const xPosition = 10; // 10px from the left
-      const yPosition = inputHeight - scaleFactor - 10; // 10px from the bottom
+      // Prepare FFmpeg input options
+      const inputOptions = [];
+      if (duration && duration !== 'N/A' && !isImage) {
+        inputOptions.push(`-t ${duration}`);  // Set the GIF duration to match the input media's duration
+      }
 
       // Start the FFmpeg process
-      const ffmpegCommand = ffmpeg(inputPath)
+      ffmpeg(inputPath)
         .input(jorkinPath)
-        .inputOptions([
-          // Only use -t if the input is a video
-          ...(videoStream ? [`-t ${inputDuration}`] : []),
-        ])
+        .inputOptions(inputOptions)  // Only apply -t if duration is valid
         .complexFilter([
-          // Loop the jorkin.gif for the entire duration of the input media
-          `[1:v]loop=0:size=1:start=0,scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=${xPosition}:${yPosition}`
+          // Loop the jorkin.gif for the entire duration of the input media, if applicable
+          `[1:v]loop=0:size=1:start=0,scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=10:10`
         ])
         .save(outputPath)
         .on('end', () => {
@@ -153,3 +140,4 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
     });
   });
 };
+
