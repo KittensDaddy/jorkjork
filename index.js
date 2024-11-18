@@ -61,7 +61,7 @@ import('node-fetch').then(fetchModule => {
         }
 
         // Send the resulting file
-        await bot.sendAnimation(chatId, outputFilePath);
+        await bot.sendDocument(chatId, outputFilePath);
 
         // Cleanup temporary files
         fs.unlinkSync(inputFilePath);
