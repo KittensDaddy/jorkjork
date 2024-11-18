@@ -73,8 +73,9 @@ const downloadFile = async (url, dest) => {
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
+      .setFfmpegPath(ffmpegPath) // Use the static FFmpeg binary
       .input(jorkinPath)
-      .complexFilter('[0:v][1:v] overlay=10:10') // Adjust overlay position here
+      .complexFilter('[0:v][1:v] overlay=10:10')
       .save(outputPath)
       .on('end', resolve)
       .on('error', reject);
