@@ -117,16 +117,16 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
 
       // Get the duration of the input media
       const inputDuration = metadata.format.duration;
-
+      
       // Start the FFmpeg process
       ffmpeg(inputPath)
         .input(jorkinPath)
         .inputOptions([
-          // No specific duration for the input GIF. It will loop by using -shortest.
+          `-t ${inputDuration}`,  // Set the duration of the overlay to match the input media
         ])
         .complexFilter([
-          // Scale the jorkin.gif and overlay it on the input media, looping it
-          `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=${xPosition}:${yPosition}:shortest=0`
+          // Loop the jorkin.gif and scale it, then overlay it on the input media
+          `[1:v]loop=-1:size=1:start=0,scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=${xPosition}:${yPosition}`
         ])
         .save(outputPath)
         .on('end', () => {
@@ -140,6 +140,3 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
     });
   });
 };
-
-
-
