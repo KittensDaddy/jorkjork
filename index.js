@@ -78,11 +78,36 @@ const downloadFile = async (url, dest) => {
 // Function to combine media with jorkin.gif
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
-    ffmpeg(inputPath) // Call fluent-ffmpeg properly
-      .input(jorkinPath)
-      .complexFilter('[0:v][1:v] overlay=10:10') // Adjust overlay position here
-      .save(outputPath)
-      .on('end', resolve)
-      .on('error', reject);
+    // Probe the input media to get its width and height
+    ffmpeg.ffprobe(inputPath, (err, metadata) => {
+      if (err) {
+        reject('Error getting input media dimensions');
+        return;
+      }
+
+      const inputWidth = metadata.streams[0].width;
+      const inputHeight = metadata.streams[0].height;
+
+      // Calculate the scale factor based on the smaller dimension
+      const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
+
+      // Start the FFmpeg process
+      ffmpeg(inputPath)
+        .input(jorkinPath)
+        .inputOptions(['-t 30']) // You can adjust the overlay duration here
+        .complexFilter([
+          // Scale the jorkin.gif and overlay it on the input media
+          `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=10:10`
+        ])
+        .save(outputPath)
+        .on('end', () => {
+          console.log('Media combined successfully');
+          resolve();
+        })
+        .on('error', (err) => {
+          console.error('Error processing media:', err);
+          reject(err);
+        });
+    });
   });
 };
