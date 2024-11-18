@@ -126,14 +126,12 @@ import('node-fetch').then(fetchModule => {
               ? [`-stream_loop -1`, `-t ${inputDuration}`] : []
           )
           .complexFilter([ 
-            `[1:v]${isAnimated ? '' : ',setpts=PTS/1'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
+            `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
           ])
           .save(outputPath)
           .outputOptions([
-            '-r 30',               // Frame rate of 25fps
+            '-r 25',               // Frame rate of 25fps
             '-fs', '15M'           // Limit file size to 27MB
-			'-filter_complex',        // This enables more detailed filtering
-			'fps=30,scale=iw:ih:flags=lanczos' // Optional: Use Lanczos filter for scaling and higher fps
           ])
           .on('end', () => {
             console.log('Media combined successfully');
