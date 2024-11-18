@@ -79,8 +79,8 @@ const downloadFile = async (url, dest) => {
 // Function to combine media with jorkin.gif, scaling jorkin.gif to 50% of the smaller dimension (width or height) of the input media
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
-    // Probe the input media to get its width and height
-    ffmpeg.ffprobe(inputPath, ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'default=noprint_wrappers=1'], (err, metadata) => {
+    // Use ffprobe to get the media dimensions
+    ffmpeg.ffprobe(inputPath, (err, metadata) => {
       if (err) {
         console.error("Error in ffprobe:", err);  // Log the error
         reject('Error getting input media dimensions');
@@ -88,14 +88,15 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       }
 
       // Ensure the media contains valid dimensions
-      if (!metadata.streams[0] || !metadata.streams[0].width || !metadata.streams[0].height) {
+      const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
+      if (!videoStream || !videoStream.width || !videoStream.height) {
         console.error("Invalid media dimensions");
         reject('Invalid media dimensions');
         return;
       }
 
-      const inputWidth = metadata.streams[0].width;
-      const inputHeight = metadata.streams[0].height;
+      const inputWidth = videoStream.width;
+      const inputHeight = videoStream.height;
 
       console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
 
