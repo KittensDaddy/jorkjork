@@ -58,7 +58,7 @@ bot.on('message', async (msg) => {
 
 // Function to download a file from Telegram
 const downloadFile = async (url, dest) => {
-  const fetch = require('node-fetch');
+  const { default: fetch } = await import('node-fetch'); // Dynamically import node-fetch
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to download file: ${response.statusText}`);
   const fileStream = fs.createWriteStream(dest);
@@ -74,7 +74,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
       .input(jorkinPath)
-      .complexFilter('[0:v][1:v] overlay=10:10')
+      .complexFilter('[0:v][1:v] overlay=10:10') // Adjust overlay position here
       .save(outputPath)
       .on('end', resolve)
       .on('error', reject);
