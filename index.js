@@ -46,7 +46,7 @@ import('node-fetch').then(fetchModule => {
         const fileId = msg.photo?.[msg.photo.length - 1]?.file_id || msg.document?.file_id || msg.video?.file_id || msg.animation?.file_id;
         const fileLink = await bot.getFileLink(fileId);
         const inputFilePath = path.join(__dirname, 'input-media');
-        const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`);
+        const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`); // Force .gif output extension
 
         // Download the media file
         await downloadFile(fileLink, inputFilePath);
@@ -114,7 +114,8 @@ import('node-fetch').then(fetchModule => {
           .complexFilter([
             `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.3'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
           ])
-          .save(outputPath)
+          .output(outputPath)
+          .outputOptions(['-f gif'])  // Ensure output is GIF
           .on('end', () => {
             console.log('Media combined successfully');
             resolve();
