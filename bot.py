@@ -104,10 +104,10 @@ def process_media(media_file):
 
 # Flask Webhook Route
 @app.route(f'/{TOKEN}', methods=['POST'])
-def webhook():
+async def webhook():
     """Telegram webhook handler."""
-    update = request.get_json()
-    application.update_queue.put(update)  # Add update to the application queue
+    update = request.get_json()  # Get the incoming update
+    await application.update_queue.put(update)  # Await the asynchronous queue operation
     return 'OK', 200
 
 # Main function
