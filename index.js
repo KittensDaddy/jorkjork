@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
-const ffmpeg = require('fluent-ffmpeg');
+const ffmpeg = require('ffmpeg-static');
 const fs = require('fs');
 const path = require('path');
 
