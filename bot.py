@@ -1,54 +1,50 @@
 import os
 import requests
+import logging
 from moviepy.editor import VideoFileClip, concatenate_videoclips, ImageClip
 from PIL import Image
 from flask import Flask, request
-from telegram import Bot
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from dotenv import load_dotenv
+from telegram import Bot, ForceReply, Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Environment variables
+# Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Load environment variables
+load_dotenv()
 TOKEN = os.getenv('TOKEN')  # Your Telegram bot token from Railway environment variables
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # Public URL from Railway
+JORKIN_GIF_PATH = "jorkin.gif"  # Path to overlay GIF
 
 # Initialize Flask app and bot
 app = Flask(__name__)
 bot = Bot(token=TOKEN)
 application = Application.builder().token(TOKEN).build()
 
-# Path to overlay GIF (jorkin.gif)
-JORKIN_GIF_PATH = "jorkin.gif"
-
-# Global variable to store the user's speed preference
-user_speed = 1  # Default speed is 1 (normal speed)
-
-@app.route(f'/{TOKEN}', methods=['POST'])
-def webhook():
-    """Telegram webhook handler."""
-    update = request.get_json()
-    application.update_queue.put(update)  # Add update to the application queue
-    return 'OK', 200
-
-def start(update, context):
+# Command Handlers
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Start command handler."""
-    update.message.reply_text("Send me a video, GIF, or image to overlay with jorkin.gif!")
+    user = update.effective_user
+    await update.message.reply_html(
+        rf"Hi {user.mention_html()}! Send me a video, GIF, or image to overlay with jorkin.gif!",
+        reply_markup=ForceReply(selective=True),
+    )
 
-def set_speed(update, context):
-    """Set speed command handler."""
-    global user_speed
+async def speed_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Speed command handler."""
+    speed_factor = context.args[0] if context.args else '1'  # Default to speed x1
+    try:
+        speed_factor = float(speed_factor)
+        await update.message.reply_text(f"Speed factor set to {speed_factor}x!")
+    except ValueError:
+        await update.message.reply_text("Please provide a valid speed factor (e.g., 2, 3).")
 
-    if context.args:
-        speed = context.args[0].lower()
-        if speed == 'x2':
-            user_speed = 2
-        elif speed == 'x3':
-            user_speed = 3
-        else:
-            user_speed = 1  # Reset to normal speed if invalid input
-        update.message.reply_text(f"Speed set to {speed if speed in ['x2', 'x3'] else 'normal'}!")
-    else:
-        update.message.reply_text("Please specify the speed: /speed x2 or /speed x3.")
-
-def handle_media(update, context):
+# Media Handler
+async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle incoming media (image, video, or gif)."""
     file = update.message.video or update.message.document or update.message.photo
     if file:
@@ -65,23 +61,22 @@ def handle_media(update, context):
         # Process the media (apply jorkin.gif overlay)
         processed_gif = process_media(file_name)
         if processed_gif:
-            update.message.reply_document(document=open(processed_gif, 'rb'))
+            await update.message.reply_document(document=open(processed_gif, 'rb'))
             os.remove(file_name)  # Clean up the original file
             os.remove(processed_gif)  # Clean up the processed file
 
+# Adjust Speed Function
 def adjust_speed(media_clip, speed_factor):
     """Adjust the speed of jorkin.gif."""
     return media_clip.fx('speedx', speed_factor)
 
+# Process Media Function
 def process_media(media_file):
     """Process the media file and apply jorkin.gif overlay."""
     media_extension = media_file.split('.')[-1]
     
     # Load the overlay GIF
     overlay = ImageClip(JORKIN_GIF_PATH).set_duration(10).resize(height=100)
-
-    # Apply speed adjustment based on user preference
-    overlay = adjust_speed(overlay, user_speed)
 
     if media_extension in ['mp4', 'gif']:
         # Process video or GIF
@@ -107,16 +102,27 @@ def process_media(media_file):
 
     return None
 
-def main():
+# Flask Webhook Route
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    """Telegram webhook handler."""
+    update = request.get_json()
+    application.update_queue.put(update)  # Add update to the application queue
+    return 'OK', 200
+
+# Main function
+async def main():
     """Main entry point for the bot."""
     # Add handlers
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("speed", set_speed))  # Add speed command handler
+    application.add_handler(CommandHandler("speed", speed_command))
     application.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO, handle_media))
     
     # Set webhook
     bot.set_webhook(url=WEBHOOK_URL)
 
+    # Start the bot
+    await application.run_polling()
+
 if __name__ == '__main__':
-    main()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
