@@ -77,10 +77,10 @@ import('node-fetch').then(fetchModule => {
           bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
         }
       } else {
-        bot.sendMessage(chatId, 'Please reply to a media message (image, WebP, GIF, or video) with /jorkthis to combine with "jorkin.gif".');
+        bot.sendMessage(chatId, 'Please reply to a media with /jorkthis');
       }
     } else {
-      bot.sendMessage(chatId, 'Please reply to a media message with /jorkthis to combine it with "jorkin.gif".');
+      bot.sendMessage(chatId, 'Please reply to a media with /jorkthis ');
     }
   });
 
@@ -133,7 +133,7 @@ import('node-fetch').then(fetchModule => {
             '-c:v gif',           // Force output to GIF
             '-pix_fmt rgb8',       // Pixel format for GIFs
             '-r 25',               // Frame rate of 25fps
-            '-fs', '27M'           // Limit file size to 27MB
+            '-fs', '15M'           // Limit file size to 27MB
           ])
           .on('end', () => {
             console.log('Media combined successfully');
