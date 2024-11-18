@@ -108,26 +108,19 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       const inputDuration = metadata.format.duration; // Get the duration of the input media
 
       console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
-      console.log(`Input media duration: ${inputDuration} seconds`);  // Log duration
-
-      // Check if the input duration is valid
-      const isValidDuration = !isNaN(inputDuration) && inputDuration > 0;
-      const durationOption = isValidDuration ? `-t ${inputDuration}` : '';
+      console.log(`Input media duration: ${inputDuration || 'N/A'} seconds`);  // Log duration
 
       // Calculate the scale factor based on the smaller dimension
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
 
-      // Log the duration option and scale factor
-      console.log(`Duration Option: ${durationOption}`);
-      console.log(`Scale Factor: ${scaleFactor}`);
+      // Determine if the input is animated
+      const isAnimated = inputDuration && !isNaN(inputDuration) && inputDuration > 0;
+      console.log(`Is input animated? ${isAnimated}`);  // Log animation check
 
       // Start the FFmpeg process
-      ffmpeg(inputPath)
+      const ffmpegCommand = ffmpeg(inputPath)
         .input(jorkinPath)
-        .inputOptions([
-          `-stream_loop -1`,  // Loop jorkin.gif indefinitely
-          durationOption, // Match the input media duration
-        ])
+        .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : [`-stream_loop -1`]) // Include -t only if animated
         .complexFilter([
           // Scale the jorkin.gif and overlay it on the input media
           `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
@@ -141,6 +134,9 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
           console.error('Error processing media:', err);
           reject(err);
         });
+
+      // Log the FFmpeg command for debugging
+      console.log(ffmpegCommand._getArguments().join(' '));
     });
   });
 };
