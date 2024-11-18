@@ -34,12 +34,22 @@ bot.onText(/\/start/, (msg) => {
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
 
-  // Check if the message contains media
+  // Check if the message contains media (image, GIF, WebP, video)
   if (msg.photo || msg.document || msg.video || msg.animation) {
     try {
-      // Download the file
+      // Extract file info
       const fileId = msg.photo?.[msg.photo.length - 1]?.file_id || msg.document?.file_id || msg.video?.file_id || msg.animation?.file_id;
       const fileLink = await bot.getFileLink(fileId);
+
+      // Validate the file type (image, video, GIF, WebP)
+      const fileMimeType = msg.photo ? msg.photo[0].mime_type : msg.document?.mime_type || msg.video?.mime_type || msg.animation?.mime_type;
+      const validFileTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/avi', 'image/gif'];
+
+      if (!validFileTypes.includes(fileMimeType)) {
+        bot.sendMessage(chatId, 'Invalid file type. Please send an image, WebP, GIF, or video file.');
+        return;
+      }
+
       const inputFilePath = path.join(__dirname, 'input-media');
       const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`);
 
@@ -49,12 +59,13 @@ bot.on('message', async (msg) => {
       // Combine with jorkin.gif using FFmpeg
       await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
 
-      // Send the resulting file
+      // Send the resulting GIF file to Telegram
       await bot.sendDocument(chatId, outputFilePath);
 
-      // Cleanup temporary files
+      // Cleanup temporary files after upload
       fs.unlinkSync(inputFilePath);
       fs.unlinkSync(outputFilePath);
+
     } catch (err) {
       console.error('Error processing media:', err);
       bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
@@ -77,7 +88,7 @@ const downloadFile = async (url, dest) => {
   });
 };
 
-// Function to combine media with jorkin.gif, handling WebP (animated or static) and other formats
+// Function to combine media with jorkin.gif
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
     // Use ffprobe to get the media dimensions and determine if WebP is animated or static
@@ -114,8 +125,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
             ? [`-stream_loop -1`, `-t ${inputDuration}`] // Loop jorkin.gif to match input duration if animated
             : [] // Static input
         )
-        .complexFilter([
-          // Scale the jorkin.gif and optionally adjust speed for static inputs
+        .complexFilter([ 
           `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.3'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
         ])
         .save(outputPath)
