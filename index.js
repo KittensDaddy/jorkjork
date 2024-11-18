@@ -1,6 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api');
 const ffmpeg = require('fluent-ffmpeg');
-const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
@@ -47,22 +46,8 @@ bot.on('message', async (msg) => {
       // Download the media file
       await downloadFile(fileLink, inputFilePath);
 
-      // Check if the file is a WebP and process accordingly
-      const inputExtension = path.extname(inputFilePath).toLowerCase();
-      if (inputExtension === '.webp') {
-        // Check if the WebP is animated or static
-        const isAnimated = await isWebPAnimated(inputFilePath);
-        if (isAnimated) {
-          // Process animated WebP with ffmpeg
-          await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
-        } else {
-          // Process static WebP with sharp
-          await combineStaticWebPWithJorkin(inputFilePath, jorkinPath, outputFilePath);
-        }
-      } else {
-        // Handle other media types (GIF, Video, etc.) with ffmpeg
-        await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
-      }
+      // Combine with jorkin.gif using FFmpeg
+      await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
 
       // Send the resulting file
       await bot.sendDocument(chatId, outputFilePath);
@@ -92,52 +77,59 @@ const downloadFile = async (url, dest) => {
   });
 };
 
-// Function to determine if a WebP is animated (by checking frame count)
-const isWebPAnimated = (filePath) => {
-  return new Promise((resolve, reject) => {
-    sharp(filePath)
-      .metadata()
-      .then(metadata => {
-        // Animated WebP files have more than 1 frame
-        resolve(metadata.pages > 1);
-      })
-      .catch(err => {
-        reject(err);
-      });
-  });
-};
-
-// Function to combine static WebP with jorkin.gif
-const combineStaticWebPWithJorkin = (inputPath, jorkinPath, outputPath) => {
-  return sharp(inputPath)
-    .resize(500)  // Resize the WebP to a fixed size (optional)
-    .toBuffer()
-    .then(buffer => {
-      return new Promise((resolve, reject) => {
-        ffmpeg()
-          .input(jorkinPath)
-          .input(buffer)
-          .inputFormat('webp')
-          .outputOptions(['-filter_complex', '[0:v][1:v]overlay=0:H-h', '-t 10'])
-          .output(outputPath)
-          .on('end', resolve)
-          .on('error', reject)
-          .run();
-      });
-    });
-};
-
-// Function to combine media with jorkin.gif using ffmpeg
+// Function to combine media with jorkin.gif, handling WebP (animated or static) and other formats
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .input(jorkinPath)
-      .inputOptions(['-stream_loop -1'])
-      .complexFilter([
-        `[1:v]scale=500:500[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
-      ])
-      .save(outputPath)
-      .on('end', resolve)
-      .on('error', reject);
+    // Use ffprobe to get the media dimensions and determine if WebP is animated or static
+    ffmpeg.ffprobe(inputPath, (err, metadata) => {
+      if (err) {
+        console.error("Error in ffprobe:", err);  // Log the error
+        reject('Error getting input media dimensions');
+        return;
+      }
+
+      // Get the video stream for dimensions and frame count
+      const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
+      const inputWidth = videoStream?.width || 500; // Default width for static WebP
+      const inputHeight = videoStream?.height || 500; // Default height for static WebP
+      const frameCount = videoStream?.nb_frames || 1; // `nb_frames` is undefined for static images
+      const inputDuration = metadata.format.duration || 0; // Duration is undefined for static images
+
+      console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
+      console.log(`Input media duration: ${inputDuration || 'N/A'} seconds`);  // Log duration
+      console.log(`Input media frame count: ${frameCount}`);  // Log frame count
+
+      // Calculate the scale factor based on the smaller dimension
+      const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
+
+      // Determine if the input is animated (either duration > 0 or frame count > 1)
+      const isAnimated = inputDuration > 0 || frameCount > 1;
+      console.log(`Is input animated? ${isAnimated}`);  // Log animation check
+
+      // Create FFmpeg command
+      const ffmpegCommand = ffmpeg(inputPath)
+        .input(jorkinPath)
+        .inputOptions(
+          isAnimated
+            ? [`-stream_loop -1`, `-t ${inputDuration}`] // Loop jorkin.gif to match input duration if animated
+            : [] // Static input
+        )
+        .complexFilter([
+          // Scale the jorkin.gif and optionally adjust speed for static inputs
+          `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.3'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
+        ])
+        .save(outputPath)
+        .on('end', () => {
+          console.log('Media combined successfully');
+          resolve();
+        })
+        .on('error', (err) => {
+          console.error('Error processing media:', err);
+          reject(err);
+        });
+
+      // Log the FFmpeg command for debugging
+      console.log(ffmpegCommand._getArguments().join(' '));
+    });
   });
 };
