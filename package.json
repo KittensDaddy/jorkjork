@@ -1,12 +1,21 @@
 {
-  "name": "telegram-bot",
+  "name": "telegram-jorkin-bot",
   "version": "1.0.0",
+  "description": "A Telegram bot that combines user-uploaded media with jorkin.gif using FFmpeg.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-  "node-telegram-bot-api": "^0.61.0",
-  "node-fetch": "^3.3.0"
-}
+    "fluent-ffmpeg": "^2.1.2",
+    "fs": "latest",
+    "node-fetch": "^3.3.0",
+    "node-telegram-bot-api": "^0.61.0",
+    "path": "latest"
+  },
+  "engines": {
+    "node": ">=14.16.0"
+  },
+  "author": "Your Name",
+  "license": "MIT"
 }
