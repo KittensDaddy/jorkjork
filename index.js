@@ -33,7 +33,7 @@ import('node-fetch').then(fetchModule => {
   // Handle /start command
   bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Welcome! Reply to a media message with /jorkthis to combine it with "jorkin.gif".');
+    bot.sendMessage(chatId, 'Reply to a media message with /jorkthis');
   });
 
   // Handle media replies with /jorkthis
@@ -126,13 +126,13 @@ import('node-fetch').then(fetchModule => {
               ? [`-stream_loop -1`, `-t ${inputDuration}`] : []
           )
           .complexFilter([ 
-            `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.6'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
+            `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
           ])
           .save(outputPath)
           .outputOptions([
             '-c:v gif',           // Force output to GIF
             '-pix_fmt rgb8',       // Pixel format for GIFs
-            '-r 25',               // Frame rate of 25fps
+            '-r 30',               // Frame rate of 25fps
             '-fs', '15M'           // Limit file size to 27MB
           ])
           .on('end', () => {
