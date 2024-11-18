@@ -124,7 +124,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         .input(jorkinPath)
         .inputOptions([
           `-stream_loop -1`,  // Loop jorkin.gif indefinitely
-          `-t ${inputDuration}`, // Match the input media duration
+          durationOption, // Match the input media duration
         ])
         .complexFilter([
           // Scale the jorkin.gif and overlay it on the input media
