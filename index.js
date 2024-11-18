@@ -24,17 +24,10 @@ if (!fs.existsSync(jorkinPath)) {
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
-const ffmpegStaticPath = require.resolve('ffmpeg-ffprobe-static');
-console.log('ffmpeg-ffprobe-static path:', ffmpegStaticPath);
-console.log('FFmpeg Path:', ffmpegPath);
-console.log('FFprobe Path:', ffprobePath);
-console.log(require.resolve('ffmpeg-ffprobe-static'));
-
-
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Welcome! Send me a media file (image, GIF, or video), and I will combine it with "jorkin.gif".');
+  bot.sendMessage(chatId, 'Welcome! Send me a media file (image, WebP, GIF, or video), and I will combine it with "jorkin.gif".');
 });
 
 // Handle media messages
@@ -67,7 +60,7 @@ bot.on('message', async (msg) => {
       bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
     }
   } else {
-    bot.sendMessage(chatId, 'Please send an image, GIF, or video file to combine with "jorkin.gif".');
+    bot.sendMessage(chatId, 'Please send an image, WebP, GIF, or video file to combine with "jorkin.gif".');
   }
 });
 
@@ -84,10 +77,10 @@ const downloadFile = async (url, dest) => {
   });
 };
 
-// Function to combine media with jorkin.gif, scaling jorkin.gif to 50% of the smaller dimension (width or height) of the input media
+// Function to combine media with jorkin.gif, handling WebP (animated or static) and other formats
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
-    // Use ffprobe to get the media dimensions
+    // Use ffprobe to get the media dimensions and determine if WebP is animated or static
     ffmpeg.ffprobe(inputPath, (err, metadata) => {
       if (err) {
         console.error("Error in ffprobe:", err);  // Log the error
@@ -95,7 +88,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         return;
       }
 
-      // Ensure the media contains valid dimensions
+      // Get the video stream for dimensions and frame count
       const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
       if (!videoStream || !videoStream.width || !videoStream.height) {
         console.error("Invalid media dimensions");
@@ -105,24 +98,29 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
 
       const inputWidth = videoStream.width;
       const inputHeight = videoStream.height;
-      const inputDuration = metadata.format.duration; // Get the duration of the input media
+      const frameCount = videoStream.nb_frames || 1; // `nb_frames` is undefined for some formats
+      const inputDuration = metadata.format.duration || 0; // Duration is undefined for static images
 
       console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
       console.log(`Input media duration: ${inputDuration || 'N/A'} seconds`);  // Log duration
+      console.log(`Input media frame count: ${frameCount}`);  // Log frame count
 
       // Calculate the scale factor based on the smaller dimension
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
 
-      // Determine if the input is animated
-      const isAnimated = inputDuration && !isNaN(inputDuration) && inputDuration > 0;
+      // Determine if the input is animated (either duration > 0 or frame count > 1)
+      const isAnimated = inputDuration > 0 || frameCount > 1;
       console.log(`Is input animated? ${isAnimated}`);  // Log animation check
 
-      // Start the FFmpeg process
+      // Create FFmpeg command
       const ffmpegCommand = ffmpeg(inputPath)
         .input(jorkinPath)
-        .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : []) // Include -t only if animated
+        .inputOptions(
+          isAnimated
+            ? [`-stream_loop -1`, `-t ${inputDuration}`] // Loop jorkin.gif to match input duration if animated
+        )
         .complexFilter([
-          // Scale the jorkin.gif and overlay it on the input media
+          // Scale the jorkin.gif and optionally adjust speed for static inputs
           `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.3'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
         ])
         .save(outputPath)
