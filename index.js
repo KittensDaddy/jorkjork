@@ -33,15 +33,15 @@ import('node-fetch').then(fetchModule => {
   // Handle /start command
   bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Welcome! Reply to a media message in the supergroup with @' + bot.username + ' to combine it with "jorkin.gif".');
+    bot.sendMessage(chatId, 'Welcome! Reply to a media message with /jorkthis to combine it with "jorkin.gif".');
   });
 
-  // Handle media replies
+  // Handle media replies with /jorkthis
   bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
 
-    // Check if the message is a reply to a media message and mentions the bot's username
-    if (msg.reply_to_message && msg.reply_to_message.from.username === bot.username) {
+    // Check if the message is a reply to a media message and contains the /jorkthis command
+    if (msg.reply_to_message && msg.text && msg.text.startsWith('/jorkthis')) {
       // Check if the reply contains media
       if (msg.reply_to_message.photo || msg.reply_to_message.document || msg.reply_to_message.video || msg.reply_to_message.animation) {
         try {
@@ -60,7 +60,7 @@ import('node-fetch').then(fetchModule => {
           // Combine with jorkin.gif using FFmpeg
           await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
 
-          // Check if the output file exceeds 27MB
+          // Check if the output file exceeds 30MB
           const outputFileSize = fs.statSync(outputFilePath).size;
           if (outputFileSize > 30 * 1024 * 1024) {
             throw new Error('Output file size exceeds the 30MB limit');
@@ -77,10 +77,10 @@ import('node-fetch').then(fetchModule => {
           bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
         }
       } else {
-        bot.sendMessage(chatId, 'Please reply to a media message (image, WebP, GIF, or video) to combine with "jorkin.gif".');
+        bot.sendMessage(chatId, 'Please reply to a media message (image, WebP, GIF, or video) with /jorkthis to combine with "jorkin.gif".');
       }
     } else {
-      bot.sendMessage(chatId, 'Please reply to a media message with @' + bot.username + ' to combine it with "jorkin.gif".');
+      bot.sendMessage(chatId, 'Please reply to a media message with /jorkthis to combine it with "jorkin.gif".');
     }
   });
 
