@@ -27,48 +27,46 @@ ffmpeg.setFfprobePath(ffprobePath);
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Welcome! Send me a media file (image, WebP, GIF, or video), and I will combine it with "jorkin.gif".');
+  bot.sendMessage(chatId, 'Welcome! Send me a media file (image, WebP, GIF, or video) or a URL link, and I will combine it with "jorkin.gif".');
 });
 
-// Handle media messages
+// Handle media messages and URLs
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
 
-  // Check for various file types: photo, video, document (for GIF/WebP), animation (for GIF/WebP)
-  if (msg.photo || msg.document || msg.video || msg.animation) {
+  // If the message contains a URL (link)
+  if (msg.text && isValidURL(msg.text)) {
+    const url = msg.text;
+    const inputFilePath = path.join(__dirname, 'input-media');
+    const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`);
+
     try {
-      let fileId;
-      let fileType;
+      // Download the file from the URL
+      await downloadFile(url, inputFilePath);
 
-      // Check which type of media was sent
-      if (msg.photo) {
-        fileId = msg.photo[msg.photo.length - 1].file_id; // Most likely the largest photo
-        fileType = 'image';
-      } else if (msg.video) {
-        fileId = msg.video.file_id;
-        fileType = 'video';
-      } else if (msg.animation) {
-        fileId = msg.animation.file_id;
-        fileType = 'gif';
-      } else if (msg.document) {
-        const fileExtension = path.extname(msg.document.file_name).toLowerCase();
-        const mimeType = msg.document.mime_type;
+      // Combine with jorkin.gif using FFmpeg
+      await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
 
-        // Check if it's an image (JPG, PNG, etc.) or an allowed format (GIF, WebP)
-        if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(fileExtension) || mimeType.startsWith('image/') || mimeType === 'video/mp4') {
-          fileId = msg.document.file_id;
-          fileType = mimeType.startsWith('image/') ? 'image' : 'video';
-        } else {
-          bot.sendMessage(chatId, 'Invalid file type. Please send an image, WebP, GIF, or video file.');
-          return; // Exit if file type is not supported
-        }
-      }
+      // Send the resulting file
+      await bot.sendDocument(chatId, outputFilePath);
 
+      // Cleanup temporary files
+      fs.unlinkSync(inputFilePath);
+      fs.unlinkSync(outputFilePath);
+    } catch (err) {
+      console.error('Error processing media from URL:', err);
+      bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
+    }
+  } else if (msg.photo || msg.document || msg.video || msg.animation) {
+    // If the message contains a photo, document (file), video, or animation
+    try {
+      // Download the file
+      const fileId = msg.photo?.[msg.photo.length - 1]?.file_id || msg.document?.file_id || msg.video?.file_id || msg.animation?.file_id;
       const fileLink = await bot.getFileLink(fileId);
       const inputFilePath = path.join(__dirname, 'input-media');
       const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`);
 
-      // Download the file
+      // Download the media file
       await downloadFile(fileLink, inputFilePath);
 
       // Combine with jorkin.gif using FFmpeg
@@ -85,11 +83,11 @@ bot.on('message', async (msg) => {
       bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
     }
   } else {
-    bot.sendMessage(chatId, 'Please send an image, WebP, GIF, or video file to combine with "jorkin.gif".');
+    bot.sendMessage(chatId, 'Please send an image, WebP, GIF, video file, or a valid URL to combine with "jorkin.gif".');
   }
 });
 
-// Function to download a file from Telegram
+// Function to download a file from a URL
 const downloadFile = async (url, dest) => {
   const { default: fetch } = await import('node-fetch'); // Dynamically import node-fetch
   const response = await fetch(url);
@@ -100,6 +98,12 @@ const downloadFile = async (url, dest) => {
     response.body.on('error', reject);
     fileStream.on('finish', resolve);
   });
+};
+
+// Function to check if a string is a valid URL
+const isValidURL = (str) => {
+  const pattern = /^(https?:\/\/)?([\w-]+(\.[\w-]+)+)(\/[\w-]+)*\/?(\?[\w=&]+)?$/;
+  return pattern.test(str);
 };
 
 // Function to combine media with jorkin.gif, handling WebP (animated or static) and other formats
