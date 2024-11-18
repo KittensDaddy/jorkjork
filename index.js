@@ -2,10 +2,16 @@ const TelegramBot = require('node-telegram-bot-api');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
+const ffmpegStatic = require('ffmpeg-ffprobe-static');
+
+console.log('ffmpeg-ffprobe-static directory:', path.dirname(ffmpegStatic.ffmpeg));
+console.log('FFmpeg Path:', ffmpegStatic.ffmpeg);
+console.log('FFprobe Path:', ffmpegStatic.ffprobe);
+
 
 // Import ffmpeg-static for bundled ffmpeg binary
-const ffmpegPath = require('ffmpeg-ffprobe-static').path;
-const ffprobePath = require('ffmpeg-ffprobe-static').path;
+const ffmpegPath = require('ffmpeg-ffprobe-static').ffmpeg; // Use ffmpeg-ffprobe-static's ffmpeg
+const ffprobePath = require('ffmpeg-ffprobe-static').ffprobe; // Use ffmpeg-ffprobe-static's ffprobe
 
 // Bot token from BotFather
 const token = process.env.TELEGRAM_TOKEN;
