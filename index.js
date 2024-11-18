@@ -123,7 +123,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : []) // Include -t only if animated
         .complexFilter([
           // Scale the jorkin.gif and overlay it on the input media
-          `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
+          `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.3'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
         ])
         .save(outputPath)
         .on('end', () => {
