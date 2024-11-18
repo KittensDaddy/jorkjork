@@ -34,45 +34,52 @@ bot.onText(/\/start/, (msg) => {
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
 
-  // Check if the message contains media (image, GIF, WebP, video)
+  // Check for various file types: photo, video, document (for GIF/WebP), animation (for GIF/WebP)
   if (msg.photo || msg.document || msg.video || msg.animation) {
     try {
-      // Extract file info
-      const fileId = msg.photo?.[msg.photo.length - 1]?.file_id || msg.document?.file_id || msg.video?.file_id || msg.animation?.file_id;
-      const fileLink = await bot.getFileLink(fileId);
+      let fileId;
+      let fileType;
 
-      // Validate the file type (image, video, GIF, WebP)
-      const fileMimeType = msg.photo ? msg.photo[0].mime_type : msg.document?.mime_type || msg.video?.mime_type || msg.animation?.mime_type;
-      const validFileTypes = [
-        'image/jpeg',    // For .jpg and .jpeg
-        'image/png',     // For PNG
-        'image/webp',    // For WebP
-        'video/mp4',     // For MP4 videos
-        'video/avi',     // For AVI videos
-        'image/gif'      // For GIF
-      ];
+      // Check which type of media was sent
+      if (msg.photo) {
+        fileId = msg.photo[msg.photo.length - 1].file_id; // Most likely the largest photo
+        fileType = 'image';
+      } else if (msg.video) {
+        fileId = msg.video.file_id;
+        fileType = 'video';
+      } else if (msg.animation) {
+        fileId = msg.animation.file_id;
+        fileType = 'gif';
+      } else if (msg.document) {
+        const fileExtension = path.extname(msg.document.file_name).toLowerCase();
+        const mimeType = msg.document.mime_type;
 
-      if (!validFileTypes.includes(fileMimeType)) {
-        bot.sendMessage(chatId, 'Invalid file type. Please send an image, WebP, GIF, or video file.');
-        return;
+        // Check if it's an image (JPG, PNG, etc.) or an allowed format (GIF, WebP)
+        if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(fileExtension) || mimeType.startsWith('image/') || mimeType === 'video/mp4') {
+          fileId = msg.document.file_id;
+          fileType = mimeType.startsWith('image/') ? 'image' : 'video';
+        } else {
+          bot.sendMessage(chatId, 'Invalid file type. Please send an image, WebP, GIF, or video file.');
+          return; // Exit if file type is not supported
+        }
       }
 
+      const fileLink = await bot.getFileLink(fileId);
       const inputFilePath = path.join(__dirname, 'input-media');
       const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`);
 
-      // Download the media file
+      // Download the file
       await downloadFile(fileLink, inputFilePath);
 
       // Combine with jorkin.gif using FFmpeg
       await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
 
-      // Send the resulting GIF file to Telegram
+      // Send the resulting file
       await bot.sendDocument(chatId, outputFilePath);
 
-      // Cleanup temporary files after upload
+      // Cleanup temporary files
       fs.unlinkSync(inputFilePath);
       fs.unlinkSync(outputFilePath);
-
     } catch (err) {
       console.error('Error processing media:', err);
       bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
