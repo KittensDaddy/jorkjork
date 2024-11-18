@@ -22,6 +22,7 @@ if (!fs.existsSync(jorkinPath)) {
 // Set FFmpeg binary path for fluent-ffmpeg
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffmpegPath);
+
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
@@ -79,7 +80,7 @@ const downloadFile = async (url, dest) => {
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
     // Probe the input media to get its width and height
-    ffmpeg.ffprobe(inputPath, (err, metadata) => {
+    ffmpeg.ffprobe(inputPath, ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'default=noprint_wrappers=1'], (err, metadata) => {
       if (err) {
         console.error("Error in ffprobe:", err);  // Log the error
         reject('Error getting input media dimensions');
