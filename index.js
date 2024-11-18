@@ -106,7 +106,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       const inputWidth = videoStream.width;
       const inputHeight = videoStream.height;
 
-      console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
+      console.log(`Input media dimensions: ${inputWidth}x${inputHeight} ${inputDuration}`);  // Log dimensions
 
       // Calculate the scale factor based on the smaller dimension
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
