@@ -84,7 +84,6 @@ const downloadFile = async (url, dest) => {
   });
 };
 
-// Function to combine media with jorkin.gif, scaling jorkin.gif to 50% of the smaller dimension (width or height) of the input media
 const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
   return new Promise((resolve, reject) => {
     // Use ffprobe to get the media dimensions and duration
@@ -116,8 +115,13 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
 
       // Prepare FFmpeg input options
       const inputOptions = [];
+      let loopDuration = 0;
+      
       if (duration && duration !== 'N/A' && !isImage) {
-        inputOptions.push(`-t ${duration}`);  // Set the GIF duration to match the input media's duration
+        loopDuration = duration;  // Set the GIF duration to match the input media's duration for video
+        inputOptions.push(`-t ${duration}`);  // Only apply -t if duration is valid for videos
+      } else if (isImage) {
+        loopDuration = 10; // Set a default loop duration (in seconds) for images
       }
 
       // Start the FFmpeg process
@@ -125,9 +129,10 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         .input(jorkinPath)
         .inputOptions(inputOptions)  // Only apply -t if duration is valid
         .complexFilter([
-          // Loop the jorkin.gif for the entire duration of the input media (or indefinitely for images)
+          // Loop the jorkin.gif to match input media duration or custom for images
           `[1:v]loop=-1:size=1:start=0,scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
         ])
+        .outputOptions([`-t ${loopDuration}`])  // Set the GIF loop duration based on input media
         .save(outputPath)
         .on('end', () => {
           console.log('Media combined successfully');
