@@ -130,6 +130,7 @@ import('node-fetch').then(fetchModule => {
           ])
           .save(outputPath)
           .outputOptions([
+		    '-r 60',
             '-fs', '15M'           // Limit file size to 27MB
           ])
           .on('end', () => {
