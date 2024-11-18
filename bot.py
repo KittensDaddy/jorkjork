@@ -89,7 +89,7 @@ def main():
     """Main entry point for the bot."""
     # Add handlers
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO | filters.DOCUMENT, handle_media))
+    application.add_handler(MessageHandler(filters.ContentType.PHOTO | filters.ContentType.VIDEO | filters.ContentType.DOCUMENT, handle_media))
     
     # Set webhook
     bot.set_webhook(url=WEBHOOK_URL)
