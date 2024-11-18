@@ -109,13 +109,14 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
 
       console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
       console.log(`Input media duration: ${inputDuration} seconds`);  // Log duration
-
+		
+	  // Check if the input duration is valid
+      const durationOption = (inputDuration && inputDuration !== 'N/A' && inputDuration !== 0)
+        ? `-t ${inputDuration}`  // Use the duration if valid
+        : '';  // Omit the -t argument if invalid
+		
       // Calculate the scale factor based on the smaller dimension
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
-
-      // Calculate the bottom-left corner position
-      const xPosition = 10; // 10px from the left
-      const yPosition = inputHeight - scaleFactor - 10; // 10px from the bottom
 
       // Start the FFmpeg process
       ffmpeg(inputPath)
@@ -123,7 +124,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         .inputOptions([
           `-stream_loop -1`,  // Loop jorkin.gif indefinitely
           `-t ${inputDuration}`, // Match the input media duration
-		  `-r 30`,
+		  `-r 25`, //FPS
         ])
         .complexFilter([
           // Scale the jorkin.gif and overlay it on the input media
