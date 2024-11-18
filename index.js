@@ -130,10 +130,10 @@ import('node-fetch').then(fetchModule => {
           ])
           .save(outputPath)
           .outputOptions([
-            '-r 30',               // Frame rate of 25fps
-            '-fs', '15M',           // Limit file size to 27MB
-			'-filter_complex',        // This enables more detailed filtering
-			'fps=30,scale=iw:ih:flags=lanczos' // Optional: Use Lanczos filter for scaling and higher fps
+            '-r 30',               // Frame rate of 30fps
+            '-fs', '15M',           // Limit file size to 15MB
+            '-filter_complex',      // This enables more detailed filtering
+            'fps=30,scale=iw:ih:flags=lanczos' // Apply Lanczos scaling
           ])
           .on('end', () => {
             console.log('Media combined successfully');
@@ -147,7 +147,4 @@ import('node-fetch').then(fetchModule => {
         console.log(ffmpegCommand._getArguments().join(' '));
       });
     });
-  };
-}).catch(err => {
-  console.error('Error loading node-fetch:', err);
-});
+};
