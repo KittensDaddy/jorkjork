@@ -114,18 +114,17 @@ import('node-fetch').then(fetchModule => {
           .input(jorkinPath)
           .inputOptions(
             isAnimated
-              ? [`-stream_loop -1`, `-t ${inputDuration}`]
-              : []
+              ? [`-stream_loop -1`, `-t ${inputDuration}`] : []
           )
           .complexFilter([
             `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.3'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
           ])
           .save(outputPath)
           .outputOptions([
-            '-pix_fmt rgb8',     // Set pixel format to rgb8 (required for GIF)
-            '-r 25',             // Set frame rate to 25 fps
-			'-f gif',
-            '-fs', '27M'         // Limit the file size to 27MB
+			'-c:v gif',           // Force output to GIF
+			'-pix_fmt rgb8',       // Pixel format for GIFs
+			'-r 25',               // Frame rate of 25fps
+			'-fs', '27M'           // Limit file size to 27MB
 		  ])
           .on('end', () => {
             console.log('Media combined successfully');
