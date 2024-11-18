@@ -33,75 +33,54 @@ import('node-fetch').then(fetchModule => {
   // Handle /start command
   bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Welcome! Send me a media file (image, WebP, GIF, or video), and I will combine it with "jorkin.gif".');
+    bot.sendMessage(chatId, 'Welcome! Reply to a media message in the supergroup with @' + bot.username + ' to combine it with "jorkin.gif".');
   });
 
-  // Handle media messages
+  // Handle media replies
   bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
 
-    // Check if the message contains media
-    if (msg.photo || msg.document || msg.video || msg.animation) {
-      try {
-        const fileId = msg.photo?.[msg.photo.length - 1]?.file_id || msg.document?.file_id || msg.video?.file_id || msg.animation?.file_id;
-        const fileLink = await bot.getFileLink(fileId);
-        const inputFilePath = path.join(__dirname, 'input-media');
-        const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`); // Force .gif output extension
+    // Check if the message is a reply to a media message and mentions the bot's username
+    if (msg.reply_to_message && msg.reply_to_message.from.username === bot.username) {
+      // Check if the reply contains media
+      if (msg.reply_to_message.photo || msg.reply_to_message.document || msg.reply_to_message.video || msg.reply_to_message.animation) {
+        try {
+          const fileId = msg.reply_to_message.photo?.[msg.reply_to_message.photo.length - 1]?.file_id || 
+                        msg.reply_to_message.document?.file_id || 
+                        msg.reply_to_message.video?.file_id || 
+                        msg.reply_to_message.animation?.file_id;
+          
+          const fileLink = await bot.getFileLink(fileId);
+          const inputFilePath = path.join(__dirname, 'input-media');
+          const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`); // Force .gif output extension
 
-        // Download the media file
-        await downloadFile(fileLink, inputFilePath);
+          // Download the media file
+          await downloadFile(fileLink, inputFilePath);
 
-        // Combine with jorkin.gif using FFmpeg
-        await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
+          // Combine with jorkin.gif using FFmpeg
+          await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
 
-        // Check if the output file exceeds 27MB
-        const outputFileSize = fs.statSync(outputFilePath).size;
-        if (outputFileSize > 30 * 1024 * 1024) {
-          throw new Error('Output file size exceeds the 30MB limit');
+          // Check if the output file exceeds 27MB
+          const outputFileSize = fs.statSync(outputFilePath).size;
+          if (outputFileSize > 30 * 1024 * 1024) {
+            throw new Error('Output file size exceeds the 30MB limit');
+          }
+
+          // Send the resulting file
+          await bot.sendDocument(chatId, outputFilePath);
+
+          // Cleanup temporary files
+          fs.unlinkSync(inputFilePath);
+          fs.unlinkSync(outputFilePath);
+        } catch (err) {
+          console.error('Error processing media:', err);
+          bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
         }
-
-        // Send the resulting file
-        await bot.sendDocument(chatId, outputFilePath);
-
-        // Cleanup temporary files
-        fs.unlinkSync(inputFilePath);
-        fs.unlinkSync(outputFilePath);
-      } catch (err) {
-        console.error('Error processing media:', err);
-        bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
-      }
-    } else if (msg.reply_to_message && msg.reply_to_message.from.username === bot.username) {
-      // Handle when the bot is mentioned in reply to media
-      try {
-        const fileId = msg.photo?.[msg.photo.length - 1]?.file_id || msg.document?.file_id || msg.video?.file_id || msg.animation?.file_id;
-        const fileLink = await bot.getFileLink(fileId);
-        const inputFilePath = path.join(__dirname, 'input-media');
-        const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`); // Force .gif output extension
-
-        // Download the media file
-        await downloadFile(fileLink, inputFilePath);
-
-        // Combine with jorkin.gif using FFmpeg
-        await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
-
-        // Check if the output file exceeds 27MB
-        const outputFileSize = fs.statSync(outputFilePath).size;
-        if (outputFileSize > 30 * 1024 * 1024) {
-          throw new Error('Output file size exceeds the 30MB limit');
-        }
-
-        // Send the resulting file
-        await bot.sendDocument(chatId, outputFilePath);
-
-        // Cleanup temporary files
-        fs.unlinkSync(inputFilePath);
-        fs.unlinkSync(outputFilePath);
-      } catch (err) {
-        console.error('Error processing media:', err);
-        bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
+      } else {
+        bot.sendMessage(chatId, 'Please reply to a media message (image, WebP, GIF, or video) to combine with "jorkin.gif".');
       }
     } else {
-      bot.sendMessage(chatId, 'Please send an image, WebP, GIF, or video file to combine with "jorkin.gif".');
+      bot.sendMessage(chatId, 'Please reply to a media message with @' + bot.username + ' to combine it with "jorkin.gif".');
     }
   });
 
@@ -146,16 +125,16 @@ import('node-fetch').then(fetchModule => {
             isAnimated
               ? [`-stream_loop -1`, `-t ${inputDuration}`] : []
           )
-          .complexFilter([
+          .complexFilter([ 
             `[1:v]scale=${scaleFactor}:${scaleFactor}${isAnimated ? '' : ',setpts=PTS/1.4'}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
           ])
           .save(outputPath)
           .outputOptions([
-			'-c:v gif',           // Force output to GIF
-			'-pix_fmt rgb8',       // Pixel format for GIFs
-			'-r 25',               // Frame rate of 25fps
-			'-fs', '27M'           // Limit file size to 27MB
-		  ])
+            '-c:v gif',           // Force output to GIF
+            '-pix_fmt rgb8',       // Pixel format for GIFs
+            '-r 25',               // Frame rate of 25fps
+            '-fs', '27M'           // Limit file size to 27MB
+          ])
           .on('end', () => {
             console.log('Media combined successfully');
             resolve();
