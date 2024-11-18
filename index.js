@@ -111,13 +111,17 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       // Calculate the scale factor based on the smaller dimension
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;
 
+      // Calculate the bottom-left corner position
+      const xPosition = 0; // 10px from the left
+      const yPosition = inputHeight - scaleFactor; // 10px from the bottom
+
       // Start the FFmpeg process
       ffmpeg(inputPath)
         .input(jorkinPath)
         .inputOptions(['-t 30']) // You can adjust the overlay duration here
         .complexFilter([
           // Scale the jorkin.gif and overlay it on the input media
-          `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=10:10`
+          `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=${xPosition}:${yPosition}`
         ])
         .save(outputPath)
         .on('end', () => {
@@ -131,3 +135,4 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
     });
   });
 };
+
