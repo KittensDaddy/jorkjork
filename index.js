@@ -130,7 +130,6 @@ import('node-fetch').then(fetchModule => {
           ])
           .save(outputPath)
           .outputOptions([
-            '-r 25',               // Frame rate of 25fps
             '-fs', '15M'           // Limit file size to 27MB
           ])
           .on('end', () => {
