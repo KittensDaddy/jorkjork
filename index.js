@@ -97,14 +97,29 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
 
       // Ensure the media contains valid dimensions
       const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
-      if (!videoStream || !videoStream.width || !videoStream.height) {
-        console.error("Invalid media dimensions");
-        reject('Invalid media dimensions');
+      const imageStream = metadata.streams.find(stream => stream.codec_type === 'image');
+      
+      if (!videoStream && !imageStream) {
+        console.error("Invalid media type");
+        reject('Invalid media type');
         return;
       }
 
-      const inputWidth = videoStream.width;
-      const inputHeight = videoStream.height;
+      let inputWidth, inputHeight, inputDuration;
+
+      // For video, get the width, height, and duration
+      if (videoStream) {
+        inputWidth = videoStream.width;
+        inputHeight = videoStream.height;
+        inputDuration = metadata.format.duration;
+      }
+
+      // For image, get the width and height but no duration
+      if (imageStream) {
+        inputWidth = imageStream.width;
+        inputHeight = imageStream.height;
+        inputDuration = 5; // Default duration for images, 5 seconds
+      }
 
       console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);  // Log dimensions
 
@@ -115,18 +130,16 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       const xPosition = 10; // 10px from the left
       const yPosition = inputHeight - scaleFactor - 10; // 10px from the bottom
 
-      // Get the duration of the input media
-      const inputDuration = metadata.format.duration;
-      
       // Start the FFmpeg process
-      ffmpeg(inputPath)
+      const ffmpegCommand = ffmpeg(inputPath)
         .input(jorkinPath)
         .inputOptions([
-          `-t ${inputDuration}`,  // Set the duration of the overlay to match the input media
+          // Only use -t if the input is a video
+          ...(videoStream ? [`-t ${inputDuration}`] : []),
         ])
         .complexFilter([
-          // Loop the jorkin.gif and scale it, then overlay it on the input media
-          `[1:v]loop=-1:size=1:start=0,scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=${xPosition}:${yPosition}`
+          // Loop the jorkin.gif for the entire duration of the input media
+          `[1:v]loop=0:size=1:start=0,scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=${xPosition}:${yPosition}`
         ])
         .save(outputPath)
         .on('end', () => {
