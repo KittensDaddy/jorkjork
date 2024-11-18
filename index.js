@@ -111,7 +111,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       console.log(`Input media duration: ${inputDuration} seconds`);  // Log duration
 		
 	  // Check if the input duration is valid
-      const durationOption = (inputDuration && inputDuration !== 'N/A' && inputDuration !== 0)
+      const durationOption = (inputDuration && inputDuration !== 'N/A')
         ? `-t ${inputDuration}`  // Use the duration if valid
         : '';  // Omit the -t argument if invalid
 		
