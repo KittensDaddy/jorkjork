@@ -54,6 +54,12 @@ import('node-fetch').then(fetchModule => {
         // Combine with jorkin.gif using FFmpeg
         await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
 
+        // Check if the output file exceeds 27MB
+        const outputFileSize = fs.statSync(outputFilePath).size;
+        if (outputFileSize > 27 * 1024 * 1024) {
+          throw new Error('Output file size exceeds the 27MB limit');
+        }
+
         // Send the resulting file
         await bot.sendDocument(chatId, outputFilePath);
 
@@ -116,9 +122,9 @@ import('node-fetch').then(fetchModule => {
           ])
           .output(outputPath)
           .outputOptions([
-            '-f gif',           // Ensure output is GIF
             '-pix_fmt rgb8',     // Set pixel format to rgb8 (required for GIF)
-            '-r 25'              // Set frame rate to 15 fps (adjust as needed)
+            '-r 25',             // Set frame rate to 25 fps
+            '-fs', '27M'         // Limit the file size to 27MB
           ])
           .on('end', () => {
             console.log('Media combined successfully');
