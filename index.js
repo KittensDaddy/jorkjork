@@ -118,6 +118,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         .inputOptions(
           isAnimated
             ? [`-stream_loop -1`, `-t ${inputDuration}`] // Loop jorkin.gif to match input duration if animated
+            : [] // Static input
         )
         .complexFilter([
           // Scale the jorkin.gif and optionally adjust speed for static inputs
