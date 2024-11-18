@@ -43,7 +43,14 @@ bot.on('message', async (msg) => {
 
       // Validate the file type (image, video, GIF, WebP)
       const fileMimeType = msg.photo ? msg.photo[0].mime_type : msg.document?.mime_type || msg.video?.mime_type || msg.animation?.mime_type;
-      const validFileTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/avi', 'image/gif'];
+      const validFileTypes = [
+        'image/jpeg',    // For .jpg and .jpeg
+        'image/png',     // For PNG
+        'image/webp',    // For WebP
+        'video/mp4',     // For MP4 videos
+        'video/avi',     // For AVI videos
+        'image/gif'      // For GIF
+      ];
 
       if (!validFileTypes.includes(fileMimeType)) {
         bot.sendMessage(chatId, 'Invalid file type. Please send an image, WebP, GIF, or video file.');
