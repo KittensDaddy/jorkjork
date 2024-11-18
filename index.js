@@ -1,13 +1,12 @@
 const TelegramBot = require('node-telegram-bot-api');
 const ffmpeg = require('fluent-ffmpeg');
+const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
-const sharp = require('sharp');
-const execa = require('execa');
 
 // Import ffmpeg-static for bundled ffmpeg binary
-const ffmpegPath = '/app/node_modules/ffmpeg-ffprobe-static/ffmpeg';  // Adjust the path according to your environment
-const ffprobePath = '/app/node_modules/ffmpeg-ffprobe-static/ffprobe';  // Adjust the path according to your environment
+const ffmpegPath = '/app/node_modules/ffmpeg-ffprobe-static/ffmpeg';
+const ffprobePath = '/app/node_modules/ffmpeg-ffprobe-static/ffprobe';
 
 // Bot token from BotFather
 const token = process.env.TELEGRAM_TOKEN;
@@ -29,7 +28,7 @@ ffmpeg.setFfprobePath(ffprobePath);
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
-  bot.sendMessage(chatId, 'Welcome! Send me a media file (image, GIF, or video), and I will combine it with "jorkin.gif".');
+  bot.sendMessage(chatId, 'Welcome! Send me a media file (image, WebP, GIF, or video), and I will combine it with "jorkin.gif".');
 });
 
 // Handle media messages
@@ -48,8 +47,22 @@ bot.on('message', async (msg) => {
       // Download the media file
       await downloadFile(fileLink, inputFilePath);
 
-      // Preprocess and combine with jorkin.gif
-      await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
+      // Check if the file is a WebP and process accordingly
+      const inputExtension = path.extname(inputFilePath).toLowerCase();
+      if (inputExtension === '.webp') {
+        // Check if the WebP is animated or static
+        const isAnimated = await isWebPAnimated(inputFilePath);
+        if (isAnimated) {
+          // Process animated WebP with ffmpeg
+          await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
+        } else {
+          // Process static WebP with sharp
+          await combineStaticWebPWithJorkin(inputFilePath, jorkinPath, outputFilePath);
+        }
+      } else {
+        // Handle other media types (GIF, Video, etc.) with ffmpeg
+        await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
+      }
 
       // Send the resulting file
       await bot.sendDocument(chatId, outputFilePath);
@@ -62,7 +75,7 @@ bot.on('message', async (msg) => {
       bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
     }
   } else {
-    bot.sendMessage(chatId, 'Please send an image, GIF, or video file to combine with "jorkin.gif".');
+    bot.sendMessage(chatId, 'Please send an image, WebP, GIF, or video file to combine with "jorkin.gif".');
   }
 });
 
@@ -79,60 +92,52 @@ const downloadFile = async (url, dest) => {
   });
 };
 
-// Function to preprocess WebP files
-async function preprocessWebP(inputPath) {
-  const outputDir = path.dirname(inputPath);
-  const outputStatic = path.join(outputDir, 'output-static.png');
-  const outputAnimated = path.join(outputDir, 'output-animated.mp4');
-
-  try {
-    // Check if the file is animated or static
-    const isAnimated = await checkIfAnimatedWebP(inputPath);
-
-    if (isAnimated) {
-      // Convert animated WebP to MP4
-      await execa('dwebp', ['-m', '4', '-o', outputAnimated, inputPath]);
-      console.log(`Animated WebP converted to MP4: ${outputAnimated}`);
-      return { path: outputAnimated, type: 'video' };
-    } else {
-      // Convert static WebP to PNG
-      await sharp(inputPath).toFile(outputStatic);
-      console.log(`Static WebP converted to PNG: ${outputStatic}`);
-      return { path: outputStatic, type: 'image' };
-    }
-  } catch (error) {
-    console.error('Error processing WebP file:', error);
-    throw error;
-  }
-}
-
-// Helper function to check if WebP is animated
-async function checkIfAnimatedWebP(inputPath) {
-  const { stdout } = await execa('dwebp', ['-info', inputPath]);
-  return stdout.includes('Canvas Duration');
-}
-
-// Function to combine media with jorkin.gif, scaling jorkin.gif to 50% of the smaller dimension (width or height) of the input media
-const combineWithJorkin = async (inputPath, jorkinPath, outputPath) => {
-  const { path: processedPath, type } = await preprocessWebP(inputPath);
-
+// Function to determine if a WebP is animated (by checking frame count)
+const isWebPAnimated = (filePath) => {
   return new Promise((resolve, reject) => {
-    const scaleFactor = 250; // Example scale factor for demonstration
-
-    const ffmpegCommand = ffmpeg(processedPath)
-      .input(jorkinPath)
-      .inputOptions(type === 'video' ? ['-stream_loop -1'] : [])
-      .complexFilter([
-        `[1:v]scale=${scaleFactor}:${scaleFactor}[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
-      ])
-      .save(outputPath)
-      .on('end', () => {
-        console.log('Media combined successfully');
-        resolve();
+    sharp(filePath)
+      .metadata()
+      .then(metadata => {
+        // Animated WebP files have more than 1 frame
+        resolve(metadata.pages > 1);
       })
-      .on('error', (err) => {
-        console.error('Error processing media:', err);
+      .catch(err => {
         reject(err);
       });
+  });
+};
+
+// Function to combine static WebP with jorkin.gif
+const combineStaticWebPWithJorkin = (inputPath, jorkinPath, outputPath) => {
+  return sharp(inputPath)
+    .resize(500)  // Resize the WebP to a fixed size (optional)
+    .toBuffer()
+    .then(buffer => {
+      return new Promise((resolve, reject) => {
+        ffmpeg()
+          .input(jorkinPath)
+          .input(buffer)
+          .inputFormat('webp')
+          .outputOptions(['-filter_complex', '[0:v][1:v]overlay=0:H-h', '-t 10'])
+          .output(outputPath)
+          .on('end', resolve)
+          .on('error', reject)
+          .run();
+      });
+    });
+};
+
+// Function to combine media with jorkin.gif using ffmpeg
+const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .input(jorkinPath)
+      .inputOptions(['-stream_loop -1'])
+      .complexFilter([
+        `[1:v]scale=500:500[scaledJorkin];[0:v][scaledJorkin]overlay=0:H-h`
+      ])
+      .save(outputPath)
+      .on('end', resolve)
+      .on('error', reject);
   });
 };
