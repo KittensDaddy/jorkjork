@@ -21,7 +21,7 @@ if (!fs.existsSync(jorkinPath)) {
 
 // Set FFmpeg binary path for fluent-ffmpeg
 ffmpeg.setFfmpegPath(ffmpegPath);
-
+ffmpeg.setFfprobePath(ffmpegPath);
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
