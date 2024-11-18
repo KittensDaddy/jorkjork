@@ -4,7 +4,7 @@ from moviepy.editor import VideoFileClip, concatenate_videoclips, ImageClip
 from PIL import Image
 from flask import Flask, request
 from telegram import Bot
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
+from telegram.ext import Application, CommandHandler, MessageHandler, filters
 
 # Environment variables
 TOKEN = os.getenv('TOKEN')  # Your Telegram bot token from Railway environment variables
@@ -13,7 +13,7 @@ WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # Public URL from Railway
 # Initialize Flask app and bot
 app = Flask(__name__)
 bot = Bot(token=TOKEN)
-dispatcher = Dispatcher(bot, update_queue=None, workers=0)
+application = Application.builder().token(TOKEN).build()
 
 # Path to overlay GIF (jorkin.gif)
 JORKIN_GIF_PATH = "jorkin.gif"
@@ -22,7 +22,7 @@ JORKIN_GIF_PATH = "jorkin.gif"
 def webhook():
     """Telegram webhook handler."""
     update = request.get_json()
-    dispatcher.process_update(update)
+    application.update_queue.put(update)  # Add update to the application queue
     return 'OK', 200
 
 def start(update, context):
@@ -88,8 +88,8 @@ def process_media(media_file):
 def main():
     """Main entry point for the bot."""
     # Add handlers
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(MessageHandler(Filters.photo | Filters.video | Filters.document, handle_media))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO | filters.DOCUMENT, handle_media))
     
     # Set webhook
     bot.set_webhook(url=WEBHOOK_URL)
