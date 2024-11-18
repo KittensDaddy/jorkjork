@@ -21,6 +21,7 @@ if (!fs.existsSync(jorkinPath)) {
 
 // Set FFmpeg binary path for fluent-ffmpeg
 ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(path.join(__dirname, 'ffprobe'));
 
 // Handle /start command
 bot.onText(/\/start/, (msg) => {
