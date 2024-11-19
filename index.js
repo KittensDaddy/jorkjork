@@ -122,13 +122,16 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;  // Scale GIF to 50% of the smallest video dimension
       const isAnimated = inputDuration > 0;
 
+      // Max FPS limit is 144
+      const maxFPS = 144;
+
       // Speed up the video if FPS is below 30
       const ffmpegCommand = ffmpeg(inputPath)
         .input(jorkinPath)
         .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : [])
-        .complexFilter([
-          `[1:v]scale=${scaleFactor}:${scaleFactor},setsar=1[scaledJorkin];` + 
-          `[0:v]fps=${targetFPS}[fast];` +  // Set FPS to at least 30
+        .complexFilter([ 
+          `[1:v]scale=${scaleFactor}:${scaleFactor},setsar=1[scaledJorkin];` +
+          `[0:v]fps=${Math.min(targetFPS, maxFPS)}[fast];` +  // Limit the FPS to a maximum of 144
           `[fast][scaledJorkin]overlay=0:H-h,fps=60,scale=iw:ih:flags=lanczos` // Combine overlay and apply scaling and FPS
         ])
         .save(outputPath)
