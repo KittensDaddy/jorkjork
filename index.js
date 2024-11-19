@@ -30,12 +30,6 @@ import('node-fetch').then(fetchModule => {
   ffmpeg.setFfmpegPath(ffmpegPath);
   ffmpeg.setFfprobePath(ffprobePath);
 
-  // Handle /start command
-  bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Reply to a media message with /jorkthis');
-  });
-
   // Handle media replies with /jorkthis
   bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
