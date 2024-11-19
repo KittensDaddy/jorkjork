@@ -7,6 +7,13 @@ import path from 'path';
 import('node-fetch').then(fetchModule => {
   const fetch = fetchModule.default;
 
+  // Fix for ES Modules: Get current directory
+  import { fileURLToPath } from 'url';
+  import { dirname } from 'path';
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+
   // Bot token from BotFather
   const token = process.env.TELEGRAM_TOKEN;
   const bot = new TelegramBot(token, { polling: true });
@@ -26,10 +33,6 @@ import('node-fetch').then(fetchModule => {
   ffmpeg.setFfmpegPath(ffmpegPath);
   ffmpeg.setFfprobePath(ffprobePath);
 
-  // In-memory queue for handling requests
-  const requestQueue = [];
-  let isProcessing = false;
-
   // Handle /start command
   bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
@@ -45,72 +48,44 @@ import('node-fetch').then(fetchModule => {
       // Check if the reply contains media
       if (msg.reply_to_message.photo || msg.reply_to_message.document || msg.reply_to_message.video || msg.reply_to_message.animation) {
         try {
-          // Add the request to the queue
-          requestQueue.push({ chatId, msg });
-          // If not already processing, start processing the queue
-          if (!isProcessing) {
-            processQueue();
+          const fileId = msg.reply_to_message.photo?.[msg.reply_to_message.photo.length - 1]?.file_id || 
+                        msg.reply_to_message.document?.file_id || 
+                        msg.reply_to_message.video?.file_id || 
+                        msg.reply_to_message.animation?.file_id;
+          
+          const fileLink = await bot.getFileLink(fileId);
+          const inputFilePath = path.join(__dirname, 'input-media');
+          const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`); // Force .gif output extension
+
+          // Download the media file
+          await downloadFile(fileLink, inputFilePath);
+
+          // Combine with jorkin.gif using FFmpeg
+          await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
+
+          // Check if the output file exceeds 30MB
+          const outputFileSize = fs.statSync(outputFilePath).size;
+          if (outputFileSize > 30 * 1024 * 1024) {
+            throw new Error('Output file size exceeds the 30MB limit');
           }
+
+          // Send the resulting file
+          await bot.sendDocument(chatId, outputFilePath);
+
+          // Cleanup temporary files
+          fs.unlinkSync(inputFilePath);
+          fs.unlinkSync(outputFilePath);
         } catch (err) {
-          console.error('Error adding to queue:', err);
-          bot.sendMessage(chatId, 'An error occurred while processing your request. Please try again.');
+          console.error('Error processing media:', err);
+          bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
         }
       } else {
         bot.sendMessage(chatId, 'Please reply to a media with /jorkthis');
       }
     } else {
-      bot.sendMessage(chatId, 'Please reply to a media with /jorkthis');
+      bot.sendMessage(chatId, 'Please reply to a media with /jorkthis ');
     }
   });
-
-  // Function to process the queue
-  const processQueue = async () => {
-    if (requestQueue.length === 0) {
-      isProcessing = false;
-      return;
-    }
-
-    isProcessing = true;
-    const { chatId, msg } = requestQueue.shift(); // Get the first request in the queue
-
-    bot.sendMessage(chatId, 'Your request is being processed. Please wait...');
-
-    try {
-      const fileId = msg.reply_to_message.photo?.[msg.reply_to_message.photo.length - 1]?.file_id || 
-                    msg.reply_to_message.document?.file_id || 
-                    msg.reply_to_message.video?.file_id || 
-                    msg.reply_to_message.animation?.file_id;
-      
-      const fileLink = await bot.getFileLink(fileId);
-      const inputFilePath = path.join(__dirname, 'input-media');
-      const outputFilePath = path.join(__dirname, `output-${Date.now()}.gif`);
-
-      // Download the media file
-      await downloadFile(fileLink, inputFilePath);
-
-      // Combine with jorkin.gif using FFmpeg
-      await combineWithJorkin(inputFilePath, jorkinPath, outputFilePath);
-
-      // Check if the output file exceeds 30MB
-      const outputFileSize = fs.statSync(outputFilePath).size;
-      if (outputFileSize > 30 * 1024 * 1024) {
-        throw new Error('Output file size exceeds the 30MB limit');
-      }
-
-      // Send the resulting file
-      await bot.sendDocument(chatId, outputFilePath);
-
-      // Cleanup temporary files
-      fs.unlinkSync(inputFilePath);
-      fs.unlinkSync(outputFilePath);
-    } catch (err) {
-      console.error('Error processing media:', err);
-      bot.sendMessage(chatId, 'An error occurred while processing your file. Please try again.');
-    }
-
-    // Process the next request in the queue
-    processQueue();
-  };
 
   // Function to download a file from Telegram
   const downloadFile = async (url, dest) => {
@@ -137,22 +112,27 @@ import('node-fetch').then(fetchModule => {
         const inputWidth = videoStream?.width || 500;
         const inputHeight = videoStream?.height || 500;
         const inputDuration = metadata.format.duration || 0;
-        const inputFPS = videoStream?.r_frame_rate.split('/')[0] || 30;
+        const inputFPS = videoStream?.r_frame_rate.split('/')[0] || 30; // Default to 30 if FPS is not available
 
-        const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5; // Scale GIF to 50% of the smallest video dimension
+        console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);
+        console.log(`Input media duration: ${inputDuration || 'N/A'} seconds`);
+        console.log(`Input media FPS: ${inputFPS}`);
+
+        // Ensure the input FPS is at least 30
+        const targetFPS = Math.max(parseFloat(inputFPS), 30);  // Ensure FPS is at least 30
+        console.log(`Target FPS: ${targetFPS}`);
+
+        const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;  // Scale GIF to 50% of the smallest video dimension
         const isAnimated = inputDuration > 0;
 
-        // Max FPS limit is 144
-        const maxFPS = 144;
-        const targetFPS = Math.max(parseFloat(inputFPS), 30);  // Ensure FPS is at least 30
-
+        // Speed up the video if FPS is below 30
         const ffmpegCommand = ffmpeg(inputPath)
           .input(jorkinPath)
           .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : [])
-          .complexFilter([ 
-            `[1:v]scale=${scaleFactor}:${scaleFactor},setsar=1[scaledJorkin];` +
-            `[0:v]fps=${Math.min(targetFPS, maxFPS)}[fast];` +
-            `[fast][scaledJorkin]overlay=0:H-h,fps=60,scale=iw:ih:flags=lanczos`
+          .complexFilter([
+            `[1:v]scale=${scaleFactor}:${scaleFactor},setsar=1[scaledJorkin];` + 
+            `[0:v]fps=${targetFPS}[fast];` +  // Set FPS to at least 30
+            `[fast][scaledJorkin]overlay=0:H-h,fps=60,scale=iw:ih:flags=lanczos` // Combine overlay and apply scaling and FPS
           ])
           .save(outputPath)
           .outputOptions([
@@ -167,8 +147,10 @@ import('node-fetch').then(fetchModule => {
             console.error('Error processing media:', err);
             reject(err);
           });
+
+        console.log(ffmpegCommand._getArguments().join(' '));  // Log the full ffmpeg command for debugging
       });
     });
-  };
+  }
 
 });
