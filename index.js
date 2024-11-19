@@ -120,7 +120,7 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         .input(jorkinPath)
         .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : [])
         .complexFilter([
-			`[1:v]scale=${scaleFactor}:${scaleFactor},setsar=1[scaledJorkin];` + // Smooth FPS for GIF
+			`[1:v]scale=${scaleFactor}:${scaleFactor},fps=11,setsar=1[scaledJorkin];` + // Smooth FPS for GIF
 			`[0:v][scaledJorkin]overlay=0:H-h,fps=60,scale=iw:ih:flags=lanczos` // Combine overlay and apply scaling and FPS
 		])
 		.save(outputPath)
