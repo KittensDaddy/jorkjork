@@ -34,8 +34,6 @@ import('node-fetch').then(fetchModule => {
   bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     bot.sendMessage(chatId, 'Reply to a media message with /jorkthis');
-	bot.sendMessage(chatId, 'Please consider donate');
-	bot.sendMessage(chatId, '7SRiMrBWCecdkdi4ws8VnBnWwh1QWD6TUNyD6nSmk9EG');
   });
 
   // Handle media replies with /jorkthis
