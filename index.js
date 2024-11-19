@@ -101,58 +101,44 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
     ffmpeg.ffprobe(inputPath, (err, metadata) => {
       if (err) {
         console.error("Error in ffprobe:", err);
-        reject("Error getting input media dimensions");
+        reject('Error getting input media dimensions');
         return;
       }
 
-      // Extract video metadata
-      const videoStream = metadata.streams.find((stream) => stream.codec_type === "video");
+      const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
       const inputWidth = videoStream?.width || 500;
       const inputHeight = videoStream?.height || 500;
-      const inputDuration = metadata.format.duration || 0; // Video duration
-      const inputFPS = videoStream?.r_frame_rate ? eval(videoStream.r_frame_rate) : 25; // FPS calculation
+      const inputDuration = metadata.format.duration || 0;
 
       console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);
-      console.log(`Input media duration: ${inputDuration} seconds`);
-      console.log(`Input media FPS: ${inputFPS}`);
+      console.log(`Input media duration: ${inputDuration || 'N/A'} seconds`);
 
-      // Jorkin GIF Properties
-      const gifFrameDuration = 3 / 100; // GIF frame duration in seconds
-      const gifFrames = 5; // Total GIF frames
-      const gifFPS = 1 / gifFrameDuration; // GIF FPS (33.33)
+      const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;  // Scale GIF to 50% of the smallest video dimension
+      const isAnimated = inputDuration > 0;
 
-      // Calculate necessary adjustments for smooth combination
-      const outputFPS = Math.min(inputFPS, gifFPS); // Match the lower FPS for consistency
-      const gifLoops = Math.ceil((inputDuration * outputFPS) / gifFrames); // Loop to match video duration
-
-      console.log(`Calculated output FPS: ${outputFPS}`);
-      console.log(`GIF needs to loop: ${gifLoops} times`);
-
-      // FFmpeg Command
       const ffmpegCommand = ffmpeg(inputPath)
         .input(jorkinPath)
-        .inputOptions([`-stream_loop ${gifLoops - 1}`, `-t ${inputDuration}`]) // Loop the GIF
+        .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : [])
         .complexFilter([
-          `[1:v]fps=${outputFPS},scale=${Math.min(inputWidth, inputHeight) * 0.5}:` +
-          `${Math.min(inputWidth, inputHeight) * 0.5},setsar=1[scaledJorkin];` +
-          `[0:v][scaledJorkin]overlay=0:H-h`
-        ])
-        .outputOptions([
-          `-r ${outputFPS}`, // Set output frame rate
-          `-fs 15M` // Optional file size limit
-        ])
-        .save(outputPath)
-        .on("end", () => {
-          console.log("Media combined successfully");
+			`[1:v]scale=${scaleFactor}:${scaleFactor},setsar=1[scaledJorkin];` + // Smooth FPS for GIF
+			`[0:v][scaledJorkin]overlay=0:H-h,fps=60,scale=iw:ih:flags=lanczos` // Combine overlay and apply scaling and FPS
+		])
+		.save(outputPath)
+		.outputOptions([
+			'-r 60', // Ensure the output video frame rate is 30
+			'-fs', '15M' // Limit file size to 15MB (optional, adjust as needed)
+		])
+        .on('end', () => {
+          console.log('Media combined successfully');
           resolve();
         })
-        .on("error", (err) => {
-          console.error("Error processing media:", err);
+        .on('error', (err) => {
+          console.error('Error processing media:', err);
           reject(err);
         });
 
-      console.log(ffmpegCommand._getArguments().join(" "));
+      console.log(ffmpegCommand._getArguments().join(' '));  // Log the full ffmpeg command for debugging
     });
   });
-};
+}
 });
