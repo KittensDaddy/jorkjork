@@ -138,7 +138,7 @@ import('node-fetch').then(fetchModule => {
           .save(outputPath)
           .outputOptions([
             '-r 60', // Ensure the output video frame rate is 60
-            '-fs', '15M' // Limit file size to 15MB (optional, adjust as needed)
+            '-fs', '50M' // Limit file size to 15MB (optional, adjust as needed)
           ])
           .on('end', () => {
             console.log('Media combined successfully');
