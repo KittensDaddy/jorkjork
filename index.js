@@ -120,16 +120,14 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
         .input(jorkinPath)
         .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : [])
         .complexFilter([
-          `[1:v]scale=${scaleFactor}:${scaleFactor},fps=30,setsar=1[scaledJorkin];` + // Smooth FPS for GIF
-          `[0:v][scaledJorkin]overlay=0:H-h` // Overlay GIF at the bottom-left corner
-        ])
-        .save(outputPath)
-        .outputOptions([
-          '-r 30', // Ensure the output video frame rate is 30
-          '-fs', '15M', // Limit file size to 15MB (optional, adjust as needed)
-          '-filter_complex',  // Detailed filtering
-          'fps=30,scale=iw:ih:flags=lanczos'  // Use Lanczos filter for high-quality scaling
-        ])
+			`[1:v]scale=${scaleFactor}:${scaleFactor},fps=30,setsar=1[scaledJorkin];` + // Smooth FPS for GIF
+			`[0:v][scaledJorkin]overlay=0:H-h,fps=30,scale=iw:ih:flags=lanczos` // Combine overlay and apply scaling and FPS
+		])
+		.save(outputPath)
+		.outputOptions([
+			'-r 30', // Ensure the output video frame rate is 30
+			'-fs', '15M' // Limit file size to 15MB (optional, adjust as needed)
+		])
         .on('end', () => {
           console.log('Media combined successfully');
           resolve();
