@@ -81,8 +81,6 @@ import('node-fetch').then(fetchModule => {
       } else {
         bot.sendMessage(chatId, 'Please reply to a media with /jorkthis');
       }
-    } else {
-      bot.sendMessage(chatId, 'Please reply to a media with /jorkthis ');
     }
   });
 
