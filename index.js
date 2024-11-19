@@ -2,14 +2,15 @@ import TelegramBot from 'node-telegram-bot-api';
 import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
 // Dynamically import node-fetch for downloading files
 import('node-fetch').then(fetchModule => {
   const fetch = fetchModule.default;
 
   // Fix for ES Modules: Get current directory
-  import { fileURLToPath } from 'url';
-  import { dirname } from 'path';
+  
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
