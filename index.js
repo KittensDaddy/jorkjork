@@ -109,25 +109,33 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
       const inputWidth = videoStream?.width || 500;
       const inputHeight = videoStream?.height || 500;
       const inputDuration = metadata.format.duration || 0;
+      const inputFPS = videoStream?.r_frame_rate.split('/')[0] || 30; // Default to 30 if FPS is not available
 
       console.log(`Input media dimensions: ${inputWidth}x${inputHeight}`);
       console.log(`Input media duration: ${inputDuration || 'N/A'} seconds`);
+      console.log(`Input media FPS: ${inputFPS}`);
+
+      // Ensure the input FPS is at least 30
+      const targetFPS = Math.max(parseFloat(inputFPS), 30);  // Ensure FPS is at least 30
+      console.log(`Target FPS: ${targetFPS}`);
 
       const scaleFactor = Math.min(inputWidth, inputHeight) * 0.5;  // Scale GIF to 50% of the smallest video dimension
       const isAnimated = inputDuration > 0;
 
+      // Speed up the video if FPS is below 30
       const ffmpegCommand = ffmpeg(inputPath)
         .input(jorkinPath)
         .inputOptions(isAnimated ? [`-stream_loop -1`, `-t ${inputDuration}`] : [])
         .complexFilter([
-			`[1:v]scale=${scaleFactor}:${scaleFactor},setsar=1[scaledJorkin];` + // Smooth FPS for GIF
-			`[0:v][scaledJorkin]overlay=0:H-h,fps=60,scale=iw:ih:flags=lanczos` // Combine overlay and apply scaling and FPS
-		])
-		.save(outputPath)
-		.outputOptions([
-			'-r 60', // Ensure the output video frame rate is 30
-			'-fs', '15M' // Limit file size to 15MB (optional, adjust as needed)
-		])
+          `[1:v]scale=${scaleFactor}:${scaleFactor},setsar=1[scaledJorkin];` + 
+          `[0:v]fps=${targetFPS}[fast];` +  // Set FPS to at least 30
+          `[fast][scaledJorkin]overlay=0:H-h,fps=60,scale=iw:ih:flags=lanczos` // Combine overlay and apply scaling and FPS
+        ])
+        .save(outputPath)
+        .outputOptions([
+          '-r 60', // Ensure the output video frame rate is 60
+          '-fs', '15M' // Limit file size to 15MB (optional, adjust as needed)
+        ])
         .on('end', () => {
           console.log('Media combined successfully');
           resolve();
@@ -141,4 +149,5 @@ const combineWithJorkin = (inputPath, jorkinPath, outputPath) => {
     });
   });
 }
+
 });
